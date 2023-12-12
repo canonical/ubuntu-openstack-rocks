@@ -1,0 +1,55 @@
+name: Publish all ROCKs from selected branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to publish
+        required: true
+        default: main
+        type: choice
+        options:
+        - main
+        - stable/2023.1
+      filter:
+        description: Build/publish only matching ROCKs 
+        required: false
+        default: ''
+        type: string
+
+
+jobs:
+  allrocks:
+    runs-on: ubuntu-latest
+    outputs:
+      rocks: ${{ steps.all-rocks.outputs.rocks }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+      - name: List rockcraft files
+        id: list-files
+        run: |
+          all_rock_files=$(find rocks -name rockcraft.yaml -printf "%p ")
+          echo "All rock files: $all_rock_files"
+          echo "all_rock_files=$all_rock_files" >> $GITHUB_OUTPUT
+      - name: set output
+        id: all-rocks
+        run: |
+          components=()
+          # trim file name to component name
+          for file in ${{ steps.list-files.outputs.all_rock_files }}; do
+              component=$(echo $file | sed 's/rocks\/\(\S.*\)\/rockcraft.yaml/\1/')
+              [[ ! -z "$component" ]] && components+=($component)
+          done
+          all_rocks=$(echo "\"${components[@]}\"" | jq --compact-output '[. | split(" ") | .[] | select(. | match("${{ inputs.filter }}"))]')
+          echo "All rocks: $all_rocks"
+          echo "rocks=$all_rocks" >> $GITHUB_OUTPUT
+  build-and-publish:
+    needs: allrocks
+    uses: ./.github/workflows/build_publish.yaml
+    with:
+      rocks: ${{ needs.allrocks.outputs.rocks }}
+      branch: ${{ inputs.branch }}
+      publish: true

@@ -1,0 +1,41 @@
+name: Publish Rock to Registry
+description: Publishes a Rock package to the GHCR registry
+inputs:
+  rock:
+    description: Path to a .rock file
+    required: true
+  username:
+    description: Username to use for the registry
+    required: true
+  password:
+    description: Password to use for the registry
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3.0.0
+      with:
+        registry: ghcr.io
+        username: ${{ inputs.username }}
+        password: ${{ inputs.password }}
+    - name: Install skopeo
+      shell: bash
+      run: sudo snap install --devmode --channel edge skopeo
+    - name: Install yq
+      shell: bash
+      run: sudo snap install yq
+    - name: Import and push to github package
+      shell: bash
+      run: |
+        rock_file="${{ inputs.rock }}"
+        rockdir=$(dirname $rock_file)
+        image_name="$(yq '.name' $rockdir/rockcraft.yaml)"
+        version="$(yq '.version' $rockdir/rockcraft.yaml)"
+        sudo skopeo \
+          --insecure-policy \
+          copy \
+          oci-archive:"${rock_file}" \
+          docker-daemon:"ghcr.io/canonical/${image_name}:${version}"
+        echo "Publishing rock ${image_name}:${version}"
+        docker push ghcr.io/canonical/${image_name}:${version}

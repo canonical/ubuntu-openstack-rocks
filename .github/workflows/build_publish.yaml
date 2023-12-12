@@ -1,0 +1,42 @@
+name: Push
+
+on:
+  workflow_call:
+    inputs:
+        rocks:
+            description: List of rocks to build
+            required: true
+            type: string
+            default: '[]'
+        publish:
+            description: Publish rocks ?
+            default: false
+            type: boolean
+        branch:
+            description: Branch to build from
+            default: main
+            type: string
+
+jobs:
+  build-and-publish:
+    if: ${{ inputs.rocks != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rock: ${{ fromJson(inputs.rocks) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+      - uses: canonical/craft-actions/rockcraft-pack@main
+        id: rockcraft
+        with:
+          path: rocks/${{ matrix.rock }}
+      - uses: ./.github/actions/publish-rock
+        if: ${{ inputs.publish }}
+        with:
+          rock: ${{ steps.rockcraft.outputs.rock }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}

@@ -1,7 +1,10 @@
-name: Pull Request
+name: Push
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
+      - stable/2023.1
 
 jobs:
   modified_rocks:
@@ -12,4 +15,4 @@ jobs:
     uses: ./.github/workflows/build_publish.yaml
     with:
       rocks: ${{ needs.modified_rocks.outputs.rocks }}
-      publish: false
+      publish: true
