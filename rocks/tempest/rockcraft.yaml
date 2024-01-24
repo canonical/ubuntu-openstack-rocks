@@ -1,0 +1,45 @@
+name: tempest
+summary: OpenStack integration test suite
+license: Apache-2.0
+description: |
+  Tempest is a set of integration tests to be run against a live OpenStack
+  cluster. Tempest has batteries of tests for OpenStack API validation,
+  Scenarios, and other specific tests useful in validating an OpenStack
+  deployment. This ROCK is built using the snap-tempest.
+version: '2023.1'
+
+# renovate: base: ubuntu:22.04@sha256:2b7412e6465c3c7fc5bb21d3e6f1917c167358449fecac8176c6e496e5c1f05f
+base: ubuntu@22.04
+
+platforms:
+  amd64:
+
+parts:
+  tempest-user:
+    plugin: nil
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 999 --system tempest
+      useradd \
+        --gid 999 \
+        --uid 999 \
+        --home-dir /var/lib/tempest \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        tempest
+    override-prime: |
+      craftctl default
+
+      # Give permission and create the required directories
+      mkdir -p $CRAFT_PRIME/var/lib/tempest
+      chown -R 999:999 $CRAFT_PRIME/var/lib/tempest
+
+  snap-tempest:
+    after: [tempest-user]
+    plugin: python # use python plugin because we need a python interpreter to run tempest internally
+    source: .
+    stage-snaps:
+    - tempest/2023.1/stable
+    stage-packages:
+    - cron
+    - python3-venv # this is required for python plugin
