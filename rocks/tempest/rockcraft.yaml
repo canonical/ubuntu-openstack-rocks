@@ -33,6 +33,9 @@ parts:
       # Give permission and create the required directories
       mkdir -p $CRAFT_PRIME/var/lib/tempest
       chown -R 999:999 $CRAFT_PRIME/var/lib/tempest
+    overlay-packages:
+      # this must be in overlay-packages - see https://github.com/canonical/rockcraft/issues/334
+      - ca-certificates # required for discover-tempest-config to download cirros image
 
   snap-tempest:
     after: [tempest-user]
