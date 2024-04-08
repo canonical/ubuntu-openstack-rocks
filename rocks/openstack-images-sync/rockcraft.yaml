@@ -1,0 +1,47 @@
+name: openstack-images-sync
+summary: Daemon to synchronize streams from a simplestreams server to glance
+license: Apache-2.0
+description: >-
+  Openstack Images Sync is a tool allowing synchronization
+  from a list of SimpleStreams source to an OpenStack cloud.
+version: "2024.1"
+# renovate: base: ubuntu:22.04@sha256:77906da86b60585ce12215807090eb327e7386c8fafb5402369e421f44eff17e
+base: ubuntu@22.04
+platforms:
+  amd64:
+run-user: _daemon_
+
+package-repositories:
+  - type: apt
+    cloud: caracal
+    priority: always
+
+services:
+  http-mirror:
+    override: replace
+    command: apachectl -D FOREGROUND
+  images-sync:
+    override: replace
+    command: simplestreams-sync
+    group: _daemon_
+    user: _daemon_
+
+parts:
+  httpd:
+    plugin: nil
+    overlay-packages:
+      - apache2
+    override-prime: |
+      craftctl default
+      mkdir -p $CRAFT_PRIME/etc/apache2/
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf
+
+  openstack-images-sync:
+    plugin: python
+    source: https://github.com/canonical/openstack-images-sync/
+    source-type: git
+    source-depth: 1
+    source-commit: abd3079a417fd3b882ae00b93623616ad72413c6
+    stage-packages:
+      - python3
+      - python3-venv
