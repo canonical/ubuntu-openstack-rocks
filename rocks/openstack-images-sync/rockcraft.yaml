@@ -41,7 +41,7 @@ parts:
     source: https://github.com/canonical/openstack-images-sync/
     source-type: git
     source-depth: 1
-    source-commit: abd3079a417fd3b882ae00b93623616ad72413c6
+    source-commit: 592c313fbf90abe691fb61f4659455dcd3d7eca8
     stage-packages:
       - python3
       - python3-venv
