@@ -4,7 +4,7 @@ license: Apache-2.0
 description: >-
   Openstack Images Sync is a tool allowing synchronization
   from a list of SimpleStreams source to an OpenStack cloud.
-version: "2024.1"
+version: "2023.2"
 # renovate: base: ubuntu:22.04@sha256:77906da86b60585ce12215807090eb327e7386c8fafb5402369e421f44eff17e
 base: ubuntu@22.04
 platforms:
@@ -13,7 +13,7 @@ run-user: _daemon_
 
 package-repositories:
   - type: apt
-    cloud: caracal
+    cloud: bobcat
     priority: always
 
 services:
