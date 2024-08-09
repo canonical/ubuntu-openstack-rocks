@@ -3,7 +3,7 @@ summary: Openstack openstack-exporter
 license: Apache-2.0
 description: |
   Ubuntu distribution of openstack-exporter, a prometheus exporter for OpenStack
-version: 1.7.0
+version: 1.7.0-3be9ddb
 
 base: bare
 # renovate: build-base: ubuntu:22.04@sha256:1b8d8ff4777f36f19bfe73ee4df61e3a0b789caeff29caa019539ec7c9a57f95
@@ -16,7 +16,7 @@ parts:
   openstack-exporter:
     plugin: go
     source: https://github.com/openstack-exporter/openstack-exporter
-    source-tag: v1.7.0
+    source-commit: 3be9ddb59cedcbfad8f0c1c254cea10c9c1a06c6
     source-type: git
     source-depth: 1
     build-environment:
