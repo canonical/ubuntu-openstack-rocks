@@ -33,8 +33,8 @@ jobs:
       - name: Setup LXD
         uses: canonical/setup-lxd@v0.1.1
         with:
-          channel: 5.21/candidate
-      - uses: canonical/craft-actions/rockcraft-pack@1de2f7678b7ecfd491bd8ec3c2d2f73fe722c643
+          channel: 5.21/stable
+      - uses: canonical/craft-actions/rockcraft-pack@main
         id: rockcraft
         with:
           path: rocks/${{ matrix.rock }}
