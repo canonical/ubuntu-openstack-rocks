@@ -18,7 +18,7 @@ package-repositories:
 services:
   masakari-engine:
     override: replace
-    command: apachectl -D FOREGROUND
+    command: masakari-engine
 
 parts:
   masakari-user:
