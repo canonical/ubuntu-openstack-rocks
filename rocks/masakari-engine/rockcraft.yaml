@@ -16,7 +16,7 @@ package-repositories:
     priority: always
 
 services:
-  wsgi-masakari-engine:
+  masakari-engine:
     override: replace
     command: apachectl -D FOREGROUND
 

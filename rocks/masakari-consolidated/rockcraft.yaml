@@ -15,11 +15,6 @@ package-repositories:
     cloud: caracal
     priority: always
 
-services:
-  wsgi-masakari-consolidated:
-    override: replace
-    command: apachectl -D FOREGROUND
-
 parts:
   masakari-user:
     plugin: nil
