@@ -1,0 +1,46 @@
+name: masakari-api
+summary: Openstack masakari-api
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack masakari-api
+version: '2024.1'
+
+# renovate: base: ubuntu:22.04@sha256:1b8d8ff4777f36f19bfe73ee4df61e3a0b789caeff29caa019539ec7c9a57f95
+base: ubuntu@22.04
+platforms:
+  amd64:
+
+package-repositories:
+  - type: apt
+    cloud: caracal
+    priority: always
+
+services:
+  wsgi-masakari-api:
+    override: replace
+    command: apachectl -D FOREGROUND
+
+parts:
+  masakari-user:
+    plugin: nil
+      # 42424:42424 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42424 --system masakari
+      useradd \
+        --gid 42424 \
+        --uid 42424 \
+        --no-create-home \
+        --home /var/lib/masakari \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        masakari
+
+  masakari-api:
+    after: [masakari-user]
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - masakari-api
+      - apache2
+      - libapache2-mod-wsgi-py3
