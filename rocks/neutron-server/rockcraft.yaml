@@ -3,16 +3,16 @@ summary: Openstack neutron-server
 license: Apache-2.0
 description: |
   Ubuntu distribution of OpenStack neutron-server
-version: '2024.1'
+version: '2024.2'
 
-# renovate: base: ubuntu:22.04@sha256:77906da86b60585ce12215807090eb327e7386c8fafb5402369e421f44eff17e
-base: ubuntu@22.04
+# renovate: base: ubuntu:24.04@sha256:77906da86b60585ce12215807090eb327e7386c8fafb5402369e421f44eff17e
+base: ubuntu@24.04
 platforms:
   amd64:
 
 package-repositories:
   - type: apt
-    cloud: caracal
+    cloud: dalmatian
     priority: always
 
 services:
