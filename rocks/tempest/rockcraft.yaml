@@ -6,8 +6,9 @@ description: |
   cluster. Tempest has batteries of tests for OpenStack API validation,
   Scenarios, and other specific tests useful in validating an OpenStack
   deployment. This ROCK is built using the snap-tempest.
-version: '2024.1'
+version: '2024.2'
 
+# NOTE(jamespage) rock base must match the tempest snap base.
 # renovate: base: ubuntu:22.04@sha256:1b8d8ff4777f36f19bfe73ee4df61e3a0b789caeff29caa019539ec7c9a57f95
 base: ubuntu@22.04
 
@@ -42,7 +43,7 @@ parts:
     plugin: python # we need to use python plugin because we need a python interpreter to run tempest internally
     source: .
     stage-snaps:
-    - tempest/2024.1/candidate
+    - tempest/2023.1/candidate
     stage-packages:
     - cron
     - python3-venv # this is required for python plugin
