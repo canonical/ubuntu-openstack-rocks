@@ -12,6 +12,11 @@ run-user: _daemon_
 platforms:
   amd64:
 
+package-repositories:
+  - type: apt
+    cloud: dalmatian
+    priority: always
+
 parts:
   openstack-exporter:
     plugin: go
