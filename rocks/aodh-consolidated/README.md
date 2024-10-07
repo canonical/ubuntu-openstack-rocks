@@ -17,7 +17,7 @@ it will help ensure that all layers of the image are imported
 into docker (this is just the top layer).
 
 ```bash
-> skopeo --insecure-policy copy oci-archive:aodh-consolidated_2024.1_amd64.rock docker-daemon:aodh-consolidated:2024.1
+> skopeo --insecure-policy copy oci-archive:aodh-consolidated_2024.2_amd64.rock docker-daemon:aodh-consolidated:2024.2
 ```
 
 If you are interested in giving it a go in Microk8s, you can
@@ -25,11 +25,11 @@ export the image from your docker registry and then into the
 microk8s registry:
 
 ```bash
-> docker save aodh-consolidated:2024.1 > ./aodh-consolidated_2024.1.tar
-> microk8s ctr image import ./aodh-consolidated_2024.1.tar
+> docker save aodh-consolidated:2024.2 > ./aodh-consolidated_2024.2.tar
+> microk8s ctr image import ./aodh-consolidated_2024.2.tar
 # Try with sunbeam
-> juju attach-resource aodh-k8s aodh-api-image=aodh-consolidated:2024.1
-> juju attach-resource aodh-k8s aodh-evaluator-image=aodh-consolidated:2024.1
-> juju attach-resource aodh-k8s aodh-notifier-image=aodh-consolidated:2024.1
-> juju attach-resource aodh-k8s aodh-listener-image=aodh-consolidated:2024.1
+> juju attach-resource aodh-k8s aodh-api-image=aodh-consolidated:2024.2
+> juju attach-resource aodh-k8s aodh-evaluator-image=aodh-consolidated:2024.2
+> juju attach-resource aodh-k8s aodh-notifier-image=aodh-consolidated:2024.2
+> juju attach-resource aodh-k8s aodh-listener-image=aodh-consolidated:2024.2
 ```
