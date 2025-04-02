@@ -1,0 +1,60 @@
+name: skyline-console
+summary: OpenStack Modern Dashboard (Web UI)
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack skyline-console
+version: "2025.1"
+# renovate: base: ubuntu:24.04@sha256:b359f1067efa76f37863778f7b6d0e8d911e3ee8efa807ad01fbf5dc1ef9006b
+base: ubuntu@24.04
+platforms:
+  amd64:
+
+services:
+  wsgi-skyline-console:
+    override: replace
+    command: apachectl -D FOREGROUND
+
+parts:
+  skyline-user:
+    plugin: nil
+    # 42491:42491 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42491 --system skyline-user
+      useradd \
+        --gid 42491 \
+        --uid 42491 \
+        --no-create-home \
+        --home /var/lib/skyline \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        skyline-user
+
+  skyline-console:
+    after: [skyline-user]
+    plugin: python
+    source: https://tarballs.openstack.org/skyline-console/skyline-console-5.0.0.tar.gz
+    python-packages:
+      - skyline-console
+    python-constraints:
+      - https://opendev.org/openstack/requirements/raw/branch/master/upper-constraints.txt
+    overlay-packages:
+      - sudo
+      - libgtk2.0-0
+      - libgtk-3-0
+      - libgbm-dev
+      - libnotify-dev
+      - libnss3
+      - libxss1
+      - libasound2t64
+      - libxtst6
+      - xauth
+      - xvfb
+    stage-packages:
+      - python3-venv
+    stage-snaps:
+      - node/16/stable
+    override-build: |
+      craftctl default
+      mkdir -p ${CRAFT_PART_INSTALL}/etc/skyline
+      mkdir -p ${CRAFT_PART_INSTALL}/var/log/skyline
