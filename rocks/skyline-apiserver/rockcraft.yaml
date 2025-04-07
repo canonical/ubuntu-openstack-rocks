@@ -1,0 +1,71 @@
+name: skyline-apiserver
+summary: Openstack skyline-apiserver
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack skyline-apiserver
+version: "2025.1"
+# renovate: base: ubuntu:24.04@sha256:b359f1067efa76f37863778f7b6d0e8d911e3ee8efa807ad01fbf5dc1ef9006b
+base: ubuntu@24.04
+platforms:
+  amd64:
+
+services:
+  wsgi-skyline-apiserver:
+    override: replace
+    command: apachectl -D FOREGROUND
+
+parts:
+  skyline-user:
+    plugin: nil
+    # 42491:42491 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42491 --system skyline
+      useradd \
+        --gid 42491 \
+        --uid 42491 \
+        --no-create-home \
+        --home /var/lib/skyline \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        skyline
+
+  skyline-apiserver:
+    after: [skyline-user]
+    plugin: python
+    source: https://opendev.org/openstack/skyline-apiserver.git
+    source-tag: 6.0.0
+    python-constraints:
+      - https://opendev.org/openstack/requirements/raw/branch/stable/2025.1/upper-constraints.txt
+    stage-packages:
+      - python3-venv
+      - python3-a2wsgi
+    overlay-packages:
+      - sudo
+      - apache2
+      - libapache2-mod-wsgi-py3
+    override-build: |
+      craftctl default
+
+      mkdir -p $CRAFT_PART_INSTALL/etc/skyline/policy
+      mkdir -p $CRAFT_PART_INSTALL/var/log/skyline
+      mkdir -p $CRAFT_PART_INSTALL/var/lib/skyline
+
+      # Note(mylesjp): Default files used for nginx+gunicorn - disabled for apache config
+      # cp $CRAFT_PART_SRC/etc/gunicorn.py $CRAFT_PART_INSTALL/etc/skyline/gunicorn.py
+      # sed -i "s|^bind = .*|bind = ['0.0.0.0:28000']|" $CRAFT_PART_INSTALL/etc/skyline/gunicorn.py
+    overlay-script: |
+      echo > "$CRAFT_OVERLAY/etc/apache2/ports.conf"
+
+      # Tell python to look in /usr/lib/python3.12/site-packages for skyline files
+      mkdir -p "$CRAFT_OVERLAY/usr/local/lib/python3.12/dist-packages"
+      echo "/usr/lib/python3.12/site-packages" > "$CRAFT_OVERLAY/usr/local/lib/python3.12/dist-packages/skyline.pth"
+
+  skyline-wsgi-script:
+    plugin: dump
+    source: scripts/
+    organize:
+      skyline-apiserver-wsgi.py: usr/bin/skyline-wsgi
+    override-prime: |
+      craftctl default
+      chmod 755 $CRAFT_PRIME/usr/bin/skyline-wsgi
