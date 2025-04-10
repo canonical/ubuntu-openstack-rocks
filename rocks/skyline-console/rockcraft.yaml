@@ -33,11 +33,11 @@ parts:
   skyline-console:
     after: [skyline-user]
     plugin: python
-    source: https://tarballs.openstack.org/skyline-console/skyline-console-5.0.0.tar.gz
+    source: https://tarballs.opendev.org/openstack/skyline-console/skyline_console-6.0.0.tar.gz
     python-packages:
       - skyline-console
     python-constraints:
-      - https://opendev.org/openstack/requirements/raw/branch/master/upper-constraints.txt
+      - https://opendev.org/openstack/requirements/raw/branch/stable/2025.1/upper-constraints.txt
     overlay-packages:
       - sudo
       - libgtk2.0-0
@@ -48,12 +48,12 @@ parts:
       - libxss1
       - libasound2t64
       - libxtst6
+      - nodejs
+      - npm
       - xauth
       - xvfb
     stage-packages:
       - python3-venv
-    stage-snaps:
-      - node/16/stable
     override-build: |
       craftctl default
       mkdir -p ${CRAFT_PART_INSTALL}/etc/skyline
