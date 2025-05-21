@@ -41,7 +41,7 @@ parts:
     plugin: python # we need to use python plugin because we need a python interpreter to run tempest internally
     source: .
     stage-snaps:
-    - tempest/latest/candidate
+    - tempest/2025.1/candidate
     stage-packages:
     - cron
     - python3-venv # this is required for python plugin
