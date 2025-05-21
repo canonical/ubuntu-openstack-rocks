@@ -13,7 +13,6 @@ package-repositories:
   - type: apt
     cloud: epoxy
     priority: always
-    pocket: proposed
 
 services:
   wsgi-aodh-api:
