@@ -1,0 +1,50 @@
+name: manila-share
+summary: Openstack manila-share
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack manila-share
+version: "2025.1"
+# renovate: base: ubuntu:24.04@sha256:b359f1067efa76f37863778f7b6d0e8d911e3ee8efa807ad01fbf5dc1ef9006b
+base: ubuntu@24.04
+platforms:
+  amd64:
+
+package-repositories:
+  - type: apt
+    cloud: epoxy
+    priority: always
+
+services:
+  manila-share:
+    override: replace
+    command: manila-share
+    user: manila
+    group: manila
+
+parts:
+  manila-user:
+    plugin: nil
+    # 42470:42470 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42470 --system manila
+      useradd \
+        --gid 42470 \
+        --uid 42470 \
+        --no-create-home \
+        --home /var/lib/manila \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        manila
+
+  manila-share:
+    after: [manila-user]
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - manila-share
+      - python3-pymysql
+      # For the CepfFS driver, as mentioned:
+      # https://docs.openstack.org/manila/2025.1/configuration/shared-file-systems/drivers/cephfs_driver.html
+      - python3-rados
+      - python3-ceph-argparse
