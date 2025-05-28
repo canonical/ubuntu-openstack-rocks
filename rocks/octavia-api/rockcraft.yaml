@@ -27,7 +27,7 @@ parts:
       groupadd --root $CRAFT_OVERLAY --gid 42437 --system octavia
       useradd \
         --gid 42437 \
-        --uid 42437  \
+        --uid 42437 \
         --no-create-home \
         --home /var/lib/octavia \
         --root $CRAFT_OVERLAY \
