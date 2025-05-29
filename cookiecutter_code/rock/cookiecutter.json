@@ -1,4 +1,10 @@
 {
     "rock_name": "",
-    "packages": ""
+    "service_name": "",
+    "userid": "",
+    "packages": "",
+    "__prompts__": {
+        "userid": "uid / gid to use for the service. Skipped if empty.",
+        "packages": "required to run the service."
+    }
 }

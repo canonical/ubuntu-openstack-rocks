@@ -41,11 +41,13 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     os.chdir(cookie_dir)
     packages = "sudo " + get_suggested_packages(args.rock_name)
-    cookiecutter(
-        "rock",
-        output_dir=str(output_dir),
-        extra_context={"rock_name": args.rock_name, "packages": packages},
-    )
+    service_name = args.rock_name.split("-")[0]
+    extra_context = {
+        "rock_name": args.rock_name,
+        "packages": packages,
+        "service_name": service_name,
+    }
+    cookiecutter("rock", output_dir=str(output_dir), extra_context=extra_context)
     return 0
 
 

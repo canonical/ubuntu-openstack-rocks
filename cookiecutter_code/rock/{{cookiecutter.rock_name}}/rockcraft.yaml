@@ -15,11 +15,49 @@ package-repositories:
     priority: always
 
 services:
+  {%- if "apache2" in cookiecutter.packages.split() %}
   wsgi-{{ cookiecutter.rock_name }}:
     override: replace
     command: apachectl -D FOREGROUND
+  {%- else %}
+  {{ cookiecutter.rock_name }}:
+    override: replace
+    command: {{ cookiecutter.rock_name }}
+    {%- if cookiecutter.userid != "" %}
+    user: {{ cookiecutter.service_name }}
+    group: {{ cookiecutter.service_name }}
+    {%- endif %}
+  {%- endif %}
 
 parts:
-  {{ cookiecutter.rock_name }}:
+  {%- if cookiecutter.userid != "" %}
+  {{ cookiecutter.service_name }}-user:
     plugin: nil
-    overlay-packages: {{ cookiecutter.packages.split() | tojson }}
+    # {{ cookiecutter.userid }}:{{ cookiecutter.userid }} for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid {{ cookiecutter.userid }} --system {{ cookiecutter.service_name }}
+      useradd \
+        --gid {{ cookiecutter.userid }} \
+        --uid {{ cookiecutter.userid }} \
+        --no-create-home \
+        --home /var/lib/{{ cookiecutter.service_name }} \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        {{ cookiecutter.service_name }}
+  {%- endif %}
+
+  {{ cookiecutter.rock_name }}:
+    {% if cookiecutter.userid != "" -%}
+    after: [{{ cookiecutter.service_name }}-user]
+    {% endif -%}
+    plugin: nil
+    overlay-packages:
+      {%- for item in cookiecutter.packages.split() %}
+      - {{ item }}
+      {%- endfor %}
+    {%- if "apache2" in cookiecutter.packages.split() %}
+    override-prime: |
+      craftctl default
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf
+    {%- endif %}
