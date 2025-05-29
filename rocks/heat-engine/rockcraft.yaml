@@ -29,7 +29,7 @@ parts:
       groupadd --root $CRAFT_OVERLAY --gid 42418 --system heat
       useradd \
         --gid 42418 \
-        --uid 42418  \
+        --uid 42418 \
         --no-create-home \
         --home /var/lib/heat \
         --root $CRAFT_OVERLAY \
