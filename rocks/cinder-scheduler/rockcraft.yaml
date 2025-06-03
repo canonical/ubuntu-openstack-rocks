@@ -15,8 +15,6 @@ package-repositories:
     cloud: epoxy
     priority: always
 
-
-
 services:
   cinder-scheduler:
     override: replace
