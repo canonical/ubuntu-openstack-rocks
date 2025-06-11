@@ -18,12 +18,13 @@ services:
   masakari-hostmonitor:
     override: replace
     command: masakari-hostmonitor
+    user: masakari
+    group: masakari
 
 parts:
   masakari-user:
-    plugin:
-      nil
-      # 42424:42424 for kolla compatibility
+    plugin: nil
+    # 42424:42424 for kolla compatibility
     overlay-script: |
       groupadd --root $CRAFT_OVERLAY --gid 42424 --system masakari
       useradd \
