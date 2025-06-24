@@ -18,11 +18,13 @@ services:
   masakari-engine:
     override: replace
     command: masakari-engine
+    user: masakari
+    group: masakari
 
 parts:
   masakari-user:
     plugin: nil
-      # 42424:42424 for kolla compatibility
+    # 42424:42424 for kolla compatibility
     overlay-script: |
       groupadd --root $CRAFT_OVERLAY --gid 42424 --system masakari
       useradd \
