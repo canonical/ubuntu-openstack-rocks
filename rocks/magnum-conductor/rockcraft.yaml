@@ -39,7 +39,34 @@ parts:
 
   magnum-conductor:
     after: [magnum-user]
-    plugin: nil
+    plugin: python
+    source: https://opendev.org/openstack/magnum-capi-helm.git
+    source-tag: 1.2.1
+    stage-packages:
+      - python3-venv
+    stage-snaps:
+      - helm/latest/stable
     overlay-packages:
       - sudo
       - magnum-conductor
+    override-pull: |
+      craftctl default
+      rm $CRAFT_PART_SRC/requirements.txt
+    override-prime: |
+      craftctl default
+
+      # The plugin package installs magnum-capi-helm in
+      # $CRAFT_PRIME/bin $CRAFT_PRIME/lib/
+      # So the base ubuntu core bin and lib folder are
+      # overridden.
+      # Workaround to avoid the above situation
+      # Moving python package to dist-packages also ensure
+      # entry_points to be discovered
+      cp -rf $CRAFT_PRIME/bin/* $CRAFT_PRIME/usr/bin/
+      cp -rf $CRAFT_PRIME/lib/python3.12/site-packages/magnum_capi_helm* $CRAFT_PRIME/usr/lib/python3/dist-packages/
+      rm -rf $CRAFT_PRIME/bin
+      rm -rf $CRAFT_PRIME/lib
+      rm -rf $CRAFT_PRIME/lib64
+
+      # Move helm package to bin
+      mv $CRAFT_PRIME/helm $CRAFT_PRIME/usr/bin/
