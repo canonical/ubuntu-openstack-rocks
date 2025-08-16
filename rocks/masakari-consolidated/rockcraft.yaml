@@ -17,7 +17,7 @@ package-repositories:
 parts:
   masakari-user:
     plugin: nil
-      # 42424:42424 for kolla compatibility
+    # 42424:42424 for kolla compatibility
     overlay-script: |
       groupadd --root $CRAFT_OVERLAY --gid 42424 --system masakari
       useradd \
@@ -41,3 +41,6 @@ parts:
       - python3-consul
       - apache2
       - libapache2-mod-wsgi-py3
+    override-prime: |
+      craftctl default
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf

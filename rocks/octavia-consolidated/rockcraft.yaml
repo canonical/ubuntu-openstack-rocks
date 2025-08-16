@@ -22,7 +22,7 @@ parts:
       groupadd --root $CRAFT_OVERLAY --gid 42437 --system octavia
       useradd \
         --gid 42437 \
-        --uid 42437  \
+        --uid 42437 \
         --no-create-home \
         --home /var/lib/octavia \
         --root $CRAFT_OVERLAY \
@@ -42,3 +42,6 @@ parts:
       - python3-ovsdbapp
       - apache2
       - libapache2-mod-wsgi-py3
+    override-prime: |
+      craftctl default
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf
