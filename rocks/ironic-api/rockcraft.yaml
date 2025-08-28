@@ -1,0 +1,48 @@
+name: ironic-api
+summary: Openstack ironic-api
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack ironic-api
+version: "2024.1"
+# renovate: base: ubuntu:24.04@sha256:b359f1067efa76f37863778f7b6d0e8d911e3ee8efa807ad01fbf5dc1ef9006b
+base: ubuntu@24.04
+platforms:
+  amd64:
+
+package-repositories:
+  - type: apt
+    cloud: epoxy
+    priority: always
+
+services:
+  wsgi-ironic-api:
+    override: replace
+    command: apachectl -D FOREGROUND
+
+parts:
+  ironic-api-user:
+    plugin: nil
+    # 42422:42422 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42422 --system ironic
+      useradd \
+        --gid 42422 \
+        --uid 42422 \
+        --no-create-home \
+        --home /var/lib/ironic \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        ironic
+
+  ironic-api:
+    after: [ironic-api-user]
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - apache2
+      - libapache2-mod-wsgi-py3
+      - ironic-api
+    override-prime: |
+      craftctl default
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf
