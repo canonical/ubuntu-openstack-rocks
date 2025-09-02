@@ -26,6 +26,8 @@ parts:
     plugin: nil
     overlay-packages:
       - apache2
+    overlay-script: |
+      rm ${CRAFT_OVERLAY}/etc/apache2/ports.conf
     override-prime: |
       craftctl default
       mkdir -p $CRAFT_PRIME/etc/apache2/
