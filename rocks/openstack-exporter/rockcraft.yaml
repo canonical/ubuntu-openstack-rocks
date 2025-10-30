@@ -11,6 +11,7 @@ build-base: ubuntu@24.04
 run-user: _daemon_
 platforms:
   amd64:
+  arm64:
 
 parts:
   openstack-exporter:

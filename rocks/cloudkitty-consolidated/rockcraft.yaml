@@ -1,0 +1,47 @@
+name: cloudkitty-consolidated
+summary: Openstack cloudkitty-consolidated
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack cloudkitty-consolidated
+version: "2025.1"
+# renovate: base: ubuntu:24.04@sha256:b359f1067efa76f37863778f7b6d0e8d911e3ee8efa807ad01fbf5dc1ef9006b
+base: ubuntu@24.04
+platforms:
+  amd64:
+  arm64:
+
+package-repositories:
+  - type: apt
+    # Take flamingo package for now as per
+    # https://releases.openstack.org/teams/cloudkitty.html
+    cloud: flamingo
+    priority: always
+
+parts:
+  cloudkitty-user:
+    plugin: nil
+    # 42408:42408 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42408 --system cloudkitty
+      useradd \
+        --gid 42408 \
+        --uid 42408 \
+        --no-create-home \
+        --home /var/lib/cloudkitty \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        cloudkitty
+
+  cloudkitty-consolidated:
+    after: [cloudkitty-user]
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - apache2
+      - libapache2-mod-wsgi-py3
+      - cloudkitty-api
+      - cloudkitty-processor
+    override-prime: |
+      craftctl default
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf

@@ -8,6 +8,7 @@ base: bare
 build-base: ubuntu@24.04
 platforms:
   amd64:
+  arm64:
 
 run-user: _daemon_
 
@@ -41,4 +42,4 @@ parts:
       - coreutils_bins
     plugin: nil
     stage-snaps:
-      - consul-client/latest/edge
+      - consul-client/1.19/edge
