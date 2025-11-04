@@ -18,29 +18,30 @@ on:
             type: string
 
 jobs:
-  build-and-publish:
-    if: ${{ inputs.rocks != '[]' }}
-    runs-on: ubuntu-latest
+
+  build:
+    name: Build rock
     strategy:
       fail-fast: false
       matrix:
         rock: ${{ fromJson(inputs.rocks) }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.branch }}
-      - name: Setup LXD
-        uses: canonical/setup-lxd@v0.1.1
-        with:
-          channel: 5.21/stable
-      - uses: canonical/craft-actions/rockcraft-pack@main
-        id: rockcraft
-        with:
-          path: rocks/${{ matrix.rock }}
-      - uses: ./.github/actions/publish-rock
-        if: ${{ inputs.publish }}
-        with:
-          rock: ${{ steps.rockcraft.outputs.rock }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+    uses: canonical/data-platform-workflows/.github/workflows/build_rock.yaml@v32.2.0
+    with:
+      path-to-rock-directory: rocks/${{ matrix.rock }}
+      artifact-prefix: packed-rock-${{ matrix.rock }}
+
+  publish:
+    if: ${{ inputs.publish }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        rock: ${{ fromJson(inputs.rocks) }}
+    uses: canonical/data-platform-workflows/.github/workflows/release_rock.yaml@v32.2.0
+    with:
+      path-to-rock-directory: rocks/${{ matrix.rock }}
+      artifact-prefix: packed-rock-${{ matrix.rock }}
+      create-git-tags: true
+    permissions:
+      packages: write  # Needed to publish to GitHub Container Registry
+      contents: write  # Needed to create git tags
