@@ -47,5 +47,6 @@ parts:
       - python3-ironic-neutron-agent
       - python3-neutron-dynamic-routing
       - python3-neutron-vpnaas
+      - python3-networking-generic-switch
       - python3-networking-sfc
       - python3-oslo.vmware
