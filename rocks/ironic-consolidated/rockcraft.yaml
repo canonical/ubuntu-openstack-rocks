@@ -9,11 +9,6 @@ base: ubuntu@24.04
 platforms:
   amd64:
 
-package-repositories:
-  - type: apt
-    cloud: epoxy
-    priority: always
-
 parts:
   ironic-user:
     plugin: nil
@@ -38,7 +33,6 @@ parts:
       - apache2
       - libapache2-mod-wsgi-py3
       - ironic-api
-      - novnc
     override-prime: |
       craftctl default
       echo > $CRAFT_PRIME/etc/apache2/ports.conf
