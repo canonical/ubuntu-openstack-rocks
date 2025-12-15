@@ -43,3 +43,19 @@ parts:
       - python3-neutron-vpnaas
       - python3-networking-sfc
       - python3-oslo.vmware
+      # Required by networking-generic-switch
+      - python3-etcd3gw
+      - python3-netmiko
+
+  # networking-generic-switch does not exist in noble yet.
+  # TODO: install it via apt once the package is uploaded to noble instead.
+  neutron-generic-switch:
+    after: [neutron-server]
+    plugin: nil
+    overlay-script: |
+      mkdir -p $CRAFT_PART_INSTALL/usr/local/lib/python3.12/dist-packages
+      # We'll install networking-generic-switch without its dependencies.
+      # All of its requirements are already satisfied.
+      pip install --no-deps \
+        --target $CRAFT_PART_INSTALL/usr/local/lib/python3.12/dist-packages/ \
+        networking-generic-switch==7.3.0
