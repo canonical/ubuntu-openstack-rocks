@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       filter:
-        description: Build/publish only matching ROCKs 
+        description: Build/publish only matching ROCKs
         required: false
         default: ''
         type: string
