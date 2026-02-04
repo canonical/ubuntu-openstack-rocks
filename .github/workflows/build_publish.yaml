@@ -12,10 +12,6 @@ on:
             description: Publish rocks ?
             default: false
             type: boolean
-        branch:
-            description: Branch to build from
-            default: main
-            type: string
 
 jobs:
 
