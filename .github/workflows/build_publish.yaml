@@ -12,10 +12,6 @@ on:
             description: Publish rocks ?
             default: false
             type: boolean
-        branch:
-            description: Branch to build from
-            default: main
-            type: string
 
 jobs:
 
@@ -41,7 +37,6 @@ jobs:
     with:
       path-to-rock-directory: rocks/${{ matrix.rock }}
       artifact-prefix: packed-rock-${{ matrix.rock }}
-      create-git-tags: true
+      create-git-tags: false
     permissions:
       packages: write  # Needed to publish to GitHub Container Registry
-      contents: write  # Needed to create git tags

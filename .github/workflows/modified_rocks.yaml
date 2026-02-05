@@ -7,7 +7,6 @@ on:
             description: List of modified rocks as a json string.
             value: ${{ jobs.modifiedrocks.outputs.rocks }}
 
-
 jobs:
   modifiedrocks:
     runs-on: ubuntu-latest
