@@ -10,6 +10,7 @@ base: ubuntu@24.04
 platforms:
   amd64:
   arm64:
+  s390x:
 
 run-user: _daemon_
 
