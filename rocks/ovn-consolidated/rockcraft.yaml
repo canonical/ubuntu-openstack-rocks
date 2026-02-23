@@ -4,16 +4,11 @@ license: Apache-2.0
 description: |
   Ubuntu distribution of OVN which can be used for all OVN services
 version: "25.03"
-# renovate: base: ubuntu:24.04@sha256:b359f1067efa76f37863778f7b6d0e8d911e3ee8efa807ad01fbf5dc1ef9006b
-base: ubuntu@24.04
+# renovate: base: ubuntu:26.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
+base: ubuntu@26.04
 platforms:
   amd64:
   arm64:
-
-package-repositories:
-  - type: apt
-    cloud: epoxy
-    priority: always
 
 parts:
   ovn-consolidated:

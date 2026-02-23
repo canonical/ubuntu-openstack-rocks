@@ -5,7 +5,7 @@ description: |
   Ubuntu distribution of Hashicorp Consul
 version: "1.19.2"
 base: bare
-build-base: ubuntu@24.04
+build-base: ubuntu@26.04
 platforms:
   amd64:
   arm64:
