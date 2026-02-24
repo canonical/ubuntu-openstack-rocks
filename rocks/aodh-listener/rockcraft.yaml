@@ -6,6 +6,7 @@ description: |
 version: "2026.1"
 # renovate: base: ubuntu:26.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
 base: ubuntu@26.04
+build-base: devel
 platforms:
   amd64:
   arm64:
