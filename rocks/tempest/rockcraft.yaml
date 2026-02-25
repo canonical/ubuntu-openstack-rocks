@@ -40,17 +40,15 @@ parts:
 
   snap-tempest:
     after: [tempest-user]
-    plugin: python # we need to use python plugin because we need a python interpreter to run tempest internally
-    source: .
+    plugin: nil
     stage-snaps:
     - tempest/2025.1/candidate
     stage-packages:
     - cron
-    - python3-venv # this is required for python plugin
     - iputils-ping
     override-prime: |
       craftctl default
 
       # set suid to utilties
       # Without this tempest user can execute ping but exits with returncode 2
-      chmod u+s $CRAFT_PRIME/bin/ping
+      chmod u+s $CRAFT_PRIME/usr/bin/ping
