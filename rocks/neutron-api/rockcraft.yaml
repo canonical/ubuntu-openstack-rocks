@@ -1,0 +1,51 @@
+name: neutron-api
+summary: Openstack neutron-api
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack neutron-api
+version: "2026.1"
+# renovate: base: ubuntu:26.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
+base: ubuntu@26.04
+build-base: devel
+platforms:
+  amd64:
+  arm64:
+
+services:
+  wsgi-neutron-api:
+    override: replace
+    command: apachectl -D FOREGROUND
+
+parts:
+  neutron-user:
+    plugin: nil
+    # 42435:42435 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42435 --system neutron
+      useradd \
+        --gid 42435 \
+        --uid 42435 \
+        --no-create-home \
+        --home /var/lib/neutron \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        neutron
+
+  neutron-api:
+    after: [neutron-user]
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - neutron-api
+      - python3-ironic-neutron-agent
+      - python3-neutron-dynamic-routing
+      - python3-neutron-vpnaas
+      - python3-networking-generic-switch
+      - python3-networking-sfc
+      - python3-oslo.vmware
+      - apache2
+      - libapache2-mod-wsgi-py3
+    override-prime: |
+      craftctl default
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf

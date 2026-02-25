@@ -1,0 +1,42 @@
+name: neutron-periodic-workers
+summary: Openstack neutron-periodic-workers
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack neutron-periodic-workers
+version: "2026.1"
+# renovate: base: ubuntu:26.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
+base: ubuntu@26.04
+build-base: devel
+platforms:
+  amd64:
+  arm64:
+
+services:
+  neutron-periodic-workers:
+    override: replace
+    command: neutron-periodic-workers
+    user: neutron
+    group: neutron
+
+parts:
+  neutron-user:
+    plugin: nil
+    # 42435:42435 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42435 --system neutron
+      useradd \
+        --gid 42435 \
+        --uid 42435 \
+        --no-create-home \
+        --home /var/lib/neutron \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        neutron
+
+  neutron-periodic-workers:
+    after: [neutron-user]
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - neutron-periodic-workers
