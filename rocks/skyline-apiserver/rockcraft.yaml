@@ -9,11 +9,19 @@ base: ubuntu@26.04
 build-base: devel
 platforms:
   amd64:
+  arm64:
 
 services:
-  wsgi-skyline-apiserver:
+  nginx:
     override: replace
-    command: apachectl -D FOREGROUND
+    command: nginx -g 'daemon off;'
+  gunicorn:
+    override: replace
+    command: gunicorn -c /etc/skyline/gunicorn.py skyline_apiserver.main:app
+    after:
+      - nginx
+    user: skyline
+    group: skyline
 
 parts:
   skyline-user:
@@ -38,11 +46,11 @@ parts:
     source-tag: 7.0.0
     stage-packages:
       - python3-venv
-      - python3-a2wsgi
+      - python3-gunicorn
+      - python3-uvicorn
+      - nginx
     overlay-packages:
       - sudo
-      - apache2
-      - libapache2-mod-wsgi-py3
     override-build: |
       craftctl default
 
@@ -50,21 +58,8 @@ parts:
       mkdir -p $CRAFT_PART_INSTALL/var/log/skyline
       mkdir -p $CRAFT_PART_INSTALL/var/lib/skyline
 
-      # Note(mylesjp): Default files used for nginx+gunicorn - disabled for apache config
-      # cp $CRAFT_PART_SRC/etc/gunicorn.py $CRAFT_PART_INSTALL/etc/skyline/gunicorn.py
-      # sed -i "s|^bind = .*|bind = ['0.0.0.0:28000']|" $CRAFT_PART_INSTALL/etc/skyline/gunicorn.py
+      cp $CRAFT_PART_SRC/etc/gunicorn.py $CRAFT_PART_INSTALL/etc/skyline/gunicorn.py
     overlay-script: |
-      echo > "$CRAFT_OVERLAY/etc/apache2/ports.conf"
-
-      # Tell python to look in /usr/lib/python3.12/site-packages for skyline files
-      mkdir -p "$CRAFT_OVERLAY/usr/local/lib/python3.12/dist-packages"
-      echo "/usr/lib/python3.12/site-packages" > "$CRAFT_OVERLAY/usr/local/lib/python3.12/dist-packages/skyline.pth"
-
-  skyline-wsgi-script:
-    plugin: dump
-    source: scripts/
-    organize:
-      skyline-apiserver-wsgi.py: usr/bin/skyline-wsgi
-    override-prime: |
-      craftctl default
-      chmod 755 $CRAFT_PRIME/usr/bin/skyline-wsgi
+      # Tell python to look in /usr/lib/python3.13/site-packages for skyline files
+      mkdir -p "$CRAFT_OVERLAY/usr/local/lib/python3.13/dist-packages"
+      echo "/usr/lib/python3.13/site-packages" > "$CRAFT_OVERLAY/usr/local/lib/python3.13/dist-packages/skyline.pth"
