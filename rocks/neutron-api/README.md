@@ -1,6 +1,6 @@
-# neutron-server ROCK
+# neutron-api ROCK
 
-This is a ROCK OCI image for neutron-server.
+This is a ROCK OCI image for neutron-api.
 
 More information is coming.
 
@@ -17,7 +17,7 @@ it will help ensure that all layers of the image are imported
 into docker (this is just the top layer).
 
 ```bash
-> skopeo --insecure-policy copy oci-archive:neutron-server_2025.1_amd64.rock docker-daemon:neutron-server:2025.1
+> skopeo --insecure-policy copy oci-archive:neutron-api_2026.1_amd64.rock docker-daemon:neutron-api:2026.1
 ```
 
 If you are interested in giving it a go in Microk8s, you can
@@ -25,8 +25,8 @@ export the image from your docker registry and then into the
 microk8s registry:
 
 ```bash
-> docker save neutron-server:2025.1 > ./neutron-server_2025.1.tar
-> microk8s ctr image import ./neutron-server_2025.1.tar
+> docker save neutron-api:2026.1 > ./neutron-api_2026.1.tar
+> microk8s ctr image import ./neutron-api_2026.1.tar
 # Try with sunbeam
-> juju attach-resource neutron-server neutron-server-image=neutron-server:2025.1
+> juju attach-resource neutron-api neutron-api-image=neutron-api:2026.1
 ```
