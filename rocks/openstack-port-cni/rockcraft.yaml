@@ -1,0 +1,31 @@
+name: openstack-port-cni
+summary: OpenStack port CNI plugin
+license: Apache-2.0
+description: |
+  A CNI plugin that wraps ovs-cni with OpenStack Neutron port management.
+  Uses a thin/thick architecture where a lightweight CNI binary delegates
+  OpenStack operations to a daemon over a Unix domain socket.
+version: "0.1.0-7b7467d"
+
+# renovate: base: ubuntu:24.04@sha256:b359f1067efa76f37863778f7b6d0e8d911e3ee8efa807ad01fbf5dc1ef9006b
+base: ubuntu@24.04
+platforms:
+  amd64:
+  arm64:
+
+parts:
+  openstack-port-cni:
+    plugin: go
+    source: https://github.com/canonical/openstack-port-cni
+    source-commit: 7b7467dcb5fdb72a6fa61a3a035a9a8a3633aa23
+    source-type: git
+    source-depth: 1
+    build-environment:
+      - CGO_ENABLED: "0"
+      - GOFLAGS: -mod=readonly -ldflags=-s
+    build-snaps:
+      - go/1.25/stable
+    override-prime: |
+      craftctl default
+      mkdir -p $CRAFT_PRIME/opt/cni/bin
+      mv $CRAFT_PRIME/usr/bin/openstack-port-cni $CRAFT_PRIME/opt/cni/bin/openstack-port-cni
