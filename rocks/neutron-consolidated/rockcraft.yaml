@@ -43,6 +43,7 @@ parts:
       - python3-oslo.vmware
       - apache2
       - libapache2-mod-wsgi-py3
+      - openvswitch-common
     override-prime: |
       craftctl default
       echo > $CRAFT_PRIME/etc/apache2/ports.conf
