@@ -3,7 +3,7 @@ summary: Openstack ovn-nb-db-server
 license: Apache-2.0
 description: |
   Ubuntu distribution of OpenStack ovn-nb-db-server
-version: "25.03"
+version: "26.03"
 # renovate: base: ubuntu:26.04@sha256:fed6ddb82c61194e1814e93b59cfcb6759e5aa33c4e41bb3782313c2386ed6df
 base: ubuntu@26.04
 build-base: devel
