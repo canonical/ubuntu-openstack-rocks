@@ -5,7 +5,7 @@ description: |
   A CNI plugin that wraps ovs-cni with OpenStack Neutron port management.
   Uses a thin/thick architecture where a lightweight CNI binary delegates
   OpenStack operations to a daemon over a Unix domain socket.
-version: "0.1.0-127cdfa-24.04"
+version: "0.1.0-7d0a487-24.04"
 
 base: bare
 # renovate: base: ubuntu:24.04@sha256:b359f1067efa76f37863778f7b6d0e8d911e3ee8efa807ad01fbf5dc1ef9006b
@@ -35,7 +35,7 @@ parts:
   openstack-port-cni:
     plugin: go
     source: https://github.com/canonical/openstack-port-cni
-    source-commit: 127cdfade20862cce9ef7f8b9568c08cbabe8356
+    source-commit: 7d0a48762ebae518377ca1918a26bda1cb6c04c1
     source-type: git
     source-depth: 1
     build-environment:
