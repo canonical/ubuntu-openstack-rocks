@@ -1,0 +1,47 @@
+name: ovs-cni-plugin
+summary: OVS CNI plugin
+license: Apache-2.0
+description: |
+  A CNI plugin for Open vSwitch (OVS) that adds and removes OVS bridge
+  interfaces, with support for OVN port arguments.
+version: "0.1.0-107d5dd-25.04"
+
+base: bare
+# renovate: base: ubuntu:24.04@sha256:b359f1067efa76f37863778f7b6d0e8d911e3ee8efa807ad01fbf5dc1ef9006b
+build-base: ubuntu@24.04
+platforms:
+  amd64:
+  arm64:
+
+parts:
+  shell-tools:
+    plugin: nil
+    stage-packages:
+      - dash_bins
+      - coreutils_bins
+      - findutils_bins
+      - grep_bins
+    override-prime: |
+      craftctl default
+      ln -sf usr/bin $CRAFT_PRIME/bin
+      mkdir -p $CRAFT_PRIME/tmp
+
+  ovs-cni:
+    plugin: go
+    # TODO: Switch to upstream once https://github.com/k8snetworkplumbingwg/ovs-cni/pull/424 is merged and released
+    source: https://github.com/hemanthnakkina/ovs-cni
+    source-commit: 107d5dd18af569091d1e5b54e7acd6090a2809a9
+    source-type: git
+    source-depth: 1
+    build-environment:
+      - CGO_ENABLED: "0"
+      - GOFLAGS: -mod=vendor
+    build-snaps:
+      - go/1.23/stable
+    override-build: |
+      go build -tags no_openssl -ldflags="-s" -o $CRAFT_PART_INSTALL/ovs ./cmd/plugin
+      go build -tags no_openssl -ldflags="-s" -o $CRAFT_PART_INSTALL/marker ./cmd/marker
+      go build -tags no_openssl -ldflags="-s" -o $CRAFT_PART_INSTALL/ovs-mirror-producer ./cmd/mirror-producer
+      go build -tags no_openssl -ldflags="-s" -o $CRAFT_PART_INSTALL/ovs-mirror-consumer ./cmd/mirror-consumer
+      chown 0:0 $CRAFT_PART_INSTALL/ovs $CRAFT_PART_INSTALL/marker \
+        $CRAFT_PART_INSTALL/ovs-mirror-producer $CRAFT_PART_INSTALL/ovs-mirror-consumer
