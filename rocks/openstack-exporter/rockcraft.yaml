@@ -13,6 +13,7 @@ run-user: _daemon_
 platforms:
   amd64:
   arm64:
+  s390x:
 
 parts:
   openstack-exporter:
