@@ -46,3 +46,4 @@ parts:
       - sudo
       - gnocchi-metricd
       - ceph-common
+      - python3-boto3
