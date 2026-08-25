@@ -1,9 +1,9 @@
 name: rabbitmq
 summary: RabbitMQ
 description: AMQP based message broker.
-version: "3.12.1"
-# renovate: base: ubuntu:24.04@sha256:023f8a753c22258c9fe2d0005a7d28258038da7d620e9f93e9ad78aa266f9f11
-base: ubuntu@24.04
+version: "4.0.5"
+# renovate: base: ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03
+base: ubuntu@26.04
 
 license: Apache-2.0
 platforms:
