@@ -22,17 +22,6 @@ parts:
     stage-packages:
       - dash_bins
       - coreutils_bins
-    override-prime: |
-      craftctl default
-      # Chisel places binaries under usr/bin/ but bare rocks have no usrmerge
-      # bin->usr/bin symlink. Unlike ovs-cni-plugin (where override-build puts
-      # binaries at the root of CRAFT_PART_INSTALL), the go plugin here outputs
-      # to bin/, and openstack-port-daemon remains there after organize moves
-      # openstack-port-cni to opt/cni/bin/. Because bin/ exists as a real
-      # directory, we cannot replace it with a symlink, so create individual
-      # symlinks for /bin/sh and /bin/cp instead.
-      ln -sf ../usr/bin/dash $CRAFT_PRIME/bin/sh
-      ln -sf ../usr/bin/cp $CRAFT_PRIME/bin/cp
 
   openstack-port-cni:
     plugin: go
