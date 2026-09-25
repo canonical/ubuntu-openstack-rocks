@@ -27,6 +27,7 @@ jobs:
           components=()
           # trim file name to component name
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+              [[ -f "$file" ]] || continue
               component=$(echo $file | sed 's/rocks\/\(\S.*\)\/rockcraft.yaml/\1/')
               [[ ! -z "$component" ]] && components+=($component)
           done
