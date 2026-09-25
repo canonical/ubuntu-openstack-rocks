@@ -42,7 +42,7 @@ parts:
     after: [magnum-user]
     plugin: nil
     stage-snaps:
-      - helm/latest/stable
+      - helm/3.7/stable
     overlay-packages:
       - sudo
       - apache2
