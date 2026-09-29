@@ -1,33 +1,140 @@
-name: Push
+name: Build and publish ROCKs
 
 on:
   workflow_call:
     inputs:
-        rocks:
-            description: List of rocks to build
-            required: true
-            type: string
-            default: '[]'
-        publish:
-            description: Publish rocks ?
-            default: false
-            type: boolean
+      rocks:
+        description: JSON list of ROCKs to build
+        required: true
+        type: string
+      publish:
+        description: Publish ROCKs to GHCR
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      LAUNCHPAD_SSH_PRIVATE_KEY:
+        required: true
+      LP_ACCESS_TOKEN:
+        required: true
+      LP_ACCESS_TOKEN_SECRET:
+        required: true
+
+env:
+  LP_OWNER: openstack-ubuntu-testing-bot
+  WATCHTOWER_SNAP_CHANNEL: latest/candidate
 
 jobs:
-
   build:
-    name: Build rock
+    name: Build ${{ matrix.rock }} on Launchpad
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         rock: ${{ fromJson(inputs.rocks) }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_rock.yaml@v49.0.3
-    with:
-      path-to-rock-directory: rocks/${{ matrix.rock }}
-      artifact-prefix: packed-rock-${{ matrix.rock }}
-    permissions:
-      actions: read  # Needed by build_rock.yaml to look up the workflow version
-      contents: read
+    env:
+      LP_PREFIX: gh-rocks-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.rock }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install and configure sunbeam-watchtower
+        env:
+          LAUNCHPAD_SSH_PRIVATE_KEY: ${{ secrets.LAUNCHPAD_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          sudo snap install sunbeam-watchtower --channel="${WATCHTOWER_SNAP_CHANNEL}"
+          sudo snap connect sunbeam-watchtower:ssh-keys
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${LAUNCHPAD_SSH_PRIVATE_KEY}" > ~/.ssh/id_launchpad
+          chmod 600 ~/.ssh/id_launchpad
+          lp_host_key=$(ssh-keyscan -T 10 -t rsa git.launchpad.net 2>/dev/null)
+          lp_fingerprint=$(printf '%s\n' "${lp_host_key}" | ssh-keygen -lf - | awk '{print $2}')
+          if [ "${lp_fingerprint}" != 'SHA256:UNOzlP66WpDuEo34Wgs8mewypV0UzqHLsIFoqwe8dYo' ]; then
+            echo '::error::Unexpected git.launchpad.net SSH host key'
+            exit 1
+          fi
+          printf '%s\n' "${lp_host_key}" >> ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host git.launchpad.net
+              IdentityFile ${HOME}/.ssh/id_launchpad
+              IdentitiesOnly yes
+              StrictHostKeyChecking yes
+          EOF
+          chmod 600 ~/.ssh/config
+          git config --global user.email "openstack-testing-bot@ubuntu.com"
+          git config --global user.name "Ubuntu Openstack Testing Bot"
+          echo "WATCHTOWER_SSH_KEY=${HOME}/.ssh/id_launchpad" >> "$GITHUB_ENV"
+
+      - name: Build on Launchpad and download ROCKs
+        env:
+          LP_ACCESS_TOKEN: ${{ secrets.LP_ACCESS_TOKEN }}
+          LP_ACCESS_TOKEN_SECRET: ${{ secrets.LP_ACCESS_TOKEN_SECRET }}
+          ROCK: ${{ matrix.rock }}
+        run: |
+          set -euo pipefail
+          git switch -C "watchtower-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          sunbeam-watchtower --verbose --no-color \
+            --config "${GITHUB_WORKSPACE}/watchtower.yaml" \
+            build trigger ubuntu-openstack-rocks \
+            --local-path "${GITHUB_WORKSPACE}" \
+            --owner "${LP_OWNER}" \
+            --prefix "${LP_PREFIX}" \
+            --wait --retry 2 --timeout 5h --download \
+            "${ROCK}"
+
+      - name: Stage ROCKs for existing release workflow
+        env:
+          ROCK: ${{ matrix.rock }}
+        run: |
+          set -euo pipefail
+          mapfile -d '' files < <(find artifacts -type f -name '*.rock' -print0)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::Launchpad produced no .rock artifacts for ${ROCK}"
+            exit 1
+          fi
+          mapfile -t arches < <(awk '
+            /^platforms:[[:space:]]*$/ { in_platforms = 1; next }
+            in_platforms && /^[^[:space:]#]/ { exit }
+            in_platforms && /^  [a-z0-9]+:[[:space:]]*$/ {
+              sub(/^  /, ""); sub(/:[[:space:]]*$/, ""); print
+            }
+          ' "rocks/${ROCK}/rockcraft.yaml")
+          if [ "${#arches[@]}" -eq 0 ] || [ "${#files[@]}" -ne "${#arches[@]}" ]; then
+            echo "::error::Expected one ROCK per declared platform for ${ROCK}"
+            exit 1
+          fi
+          for arch in "${arches[@]}"; do
+            found=0
+            for file in "${files[@]}"; do
+              [[ "${file}" == *_"${arch}".rock ]] && found=$((found + 1))
+            done
+            if [ "${found}" -ne 1 ]; then
+              echo "::error::Expected one ${arch} ROCK for ${ROCK}; found ${found}"
+              exit 1
+            fi
+          done
+          for file in "${files[@]}"; do
+            cp -- "${file}" "rocks/${ROCK}/$(basename "${file}")"
+          done
+          touch .empty
+
+      - name: Upload ROCKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: packed-rock-${{ matrix.rock }}-rocks-${{ matrix.rock }}--platform-all
+          path: |
+            rocks/${{ matrix.rock }}/*.rock
+            .empty
+          include-hidden-files: true
+          if-no-files-found: error
 
   publish:
     if: ${{ inputs.publish }}
@@ -41,6 +148,47 @@ jobs:
       path-to-rock-directory: rocks/${{ matrix.rock }}
       artifact-prefix: packed-rock-${{ matrix.rock }}
     permissions:
-      actions: read  # Needed by release_rock_edge.yaml to look up the workflow version
-      contents: write  # Needed by release_rock_edge.yaml
-      packages: write  # Needed to publish to GitHub Container Registry
+      actions: read
+      contents: write
+      packages: write
+
+  cleanup:
+    if: ${{ always() }}
+    needs: [build, publish]
+    name: Clean up ${{ matrix.rock }} Launchpad recipe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        rock: ${{ fromJson(inputs.rocks) }}
+    env:
+      LP_PREFIX: gh-rocks-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.rock }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sunbeam-watchtower
+        run: sudo snap install sunbeam-watchtower --channel="${WATCHTOWER_SNAP_CHANNEL}"
+      - name: Clean up temporary Launchpad recipe and branch
+        env:
+          LP_ACCESS_TOKEN: ${{ secrets.LP_ACCESS_TOKEN }}
+          LP_ACCESS_TOKEN_SECRET: ${{ secrets.LP_ACCESS_TOKEN_SECRET }}
+        run: |
+          set -euo pipefail
+          status=0
+          sunbeam-watchtower --verbose --no-color \
+            --config "${GITHUB_WORKSPACE}/watchtower.yaml" \
+            build cleanup \
+            --project ubuntu-openstack-rocks \
+            --owner "${LP_OWNER}" \
+            --prefix "${LP_PREFIX}" || status=1
+          # Watchtower prefixes pushed refs with "tmp-" but its branch
+          # cleanup matches the supplied prefix literally.
+          sunbeam-watchtower --verbose --no-color \
+            --config "${GITHUB_WORKSPACE}/watchtower.yaml" \
+            build cleanup \
+            --project ubuntu-openstack-rocks \
+            --owner "${LP_OWNER}" \
+            --prefix "tmp-${LP_PREFIX}" || status=1
+          exit "${status}"
