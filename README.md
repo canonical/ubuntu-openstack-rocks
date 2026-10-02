@@ -1,5 +1,22 @@
 # Monolithic repo for OpenStack Rocks
 
+## CI builds
+
+Pushes to the configured branches and manual runs of **Publish all ROCKs from
+selected branch** build on Launchpad through `sunbeam-watchtower`. Each ROCK is
+built for every architecture declared in its `rockcraft.yaml`. The selected
+ROCKs are submitted together in one Watchtower invocation. Successful
+Launchpad artifacts are passed to the existing GHCR release workflow. Pull
+requests continue to use the GitHub runner build because forked pull requests
+do not receive the Launchpad credentials.
+
+The Launchpad build jobs require the `LAUNCHPAD_SSH_PRIVATE_KEY`,
+`LP_ACCESS_TOKEN`, and `LP_ACCESS_TOKEN_SECRET` Actions secrets for the
+`openstack-ubuntu-testing-bot` Launchpad account. The workflow creates
+temporary recipes and Git refs in that account and attempts to remove them
+after the release job. Its Watchtower snap channel is set in
+`.github/workflows/build_publish.yaml`.
+
 To generate a rock definition from a cookie cutter template:
 
 ```bash
