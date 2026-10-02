@@ -26,17 +26,13 @@ env:
 
 jobs:
   build:
-    name: Build ${{ matrix.rock }} on Launchpad
+    name: Build selected ROCKs on Launchpad
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        rock: ${{ fromJson(inputs.rocks) }}
     env:
-      LP_PREFIX: gh-rocks-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.rock }}
+      LP_PREFIX: gh-rocks-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -77,9 +73,18 @@ jobs:
         env:
           LP_ACCESS_TOKEN: ${{ secrets.LP_ACCESS_TOKEN }}
           LP_ACCESS_TOKEN_SECRET: ${{ secrets.LP_ACCESS_TOKEN_SECRET }}
-          ROCK: ${{ matrix.rock }}
+          ROCKS: ${{ inputs.rocks }}
         run: |
           set -euo pipefail
+          jq -er '
+            if type == "array" and length > 0 and
+              all(.[]; type == "string" and test("^[a-z0-9][a-z0-9-]*$"))
+            then .[] else error("Expected a nonempty list of ROCK names") end
+          ' <<< "${ROCKS}" > selected-rocks.list
+          mapfile -t rocks < selected-rocks.list
+          for rock in "${rocks[@]}"; do
+            test -f "rocks/${rock}/rockcraft.yaml"
+          done
           git switch -C "watchtower-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           sunbeam-watchtower --verbose --no-color \
             --config "${GITHUB_WORKSPACE}/watchtower.yaml" \
@@ -88,14 +93,39 @@ jobs:
             --owner "${LP_OWNER}" \
             --prefix "${LP_PREFIX}" \
             --wait --retry 2 --timeout 5h --download \
-            "${ROCK}"
+            "${rocks[@]}"
+
+      - name: Upload downloaded ROCKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: launchpad-rocks
+          path: artifacts/
+          if-no-files-found: error
+
+  stage:
+    name: Stage ${{ matrix.rock }} for publishing
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        rock: ${{ fromJson(inputs.rocks) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Launchpad ROCKs
+        uses: actions/download-artifact@v4
+        with:
+          name: launchpad-rocks
+          path: artifacts
 
       - name: Stage ROCKs for existing release workflow
         env:
           ROCK: ${{ matrix.rock }}
         run: |
           set -euo pipefail
-          mapfile -d '' files < <(find artifacts -type f -name '*.rock' -print0)
+          mapfile -d '' files < <(find artifacts -type f -name "${ROCK}_*.rock" -print0)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "::error::Launchpad produced no .rock artifacts for ${ROCK}"
             exit 1
@@ -138,7 +168,7 @@ jobs:
 
   publish:
     if: ${{ inputs.publish }}
-    needs: build
+    needs: stage
     strategy:
       fail-fast: false
       matrix:
@@ -154,18 +184,14 @@ jobs:
 
   cleanup:
     if: ${{ always() }}
-    needs: [build, publish]
-    name: Clean up ${{ matrix.rock }} Launchpad recipe
+    needs: [build, stage, publish]
+    name: Clean up temporary Launchpad resources
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        rock: ${{ fromJson(inputs.rocks) }}
     env:
-      LP_PREFIX: gh-rocks-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.rock }}
+      LP_PREFIX: gh-rocks-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
       - name: Install sunbeam-watchtower

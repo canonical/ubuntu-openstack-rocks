@@ -4,7 +4,8 @@
 
 Pushes to the configured branches and manual runs of **Publish all ROCKs from
 selected branch** build on Launchpad through `sunbeam-watchtower`. Each ROCK is
-built for every architecture declared in its `rockcraft.yaml`. Successful
+built for every architecture declared in its `rockcraft.yaml`. The selected
+ROCKs are submitted together in one Watchtower invocation. Successful
 Launchpad artifacts are passed to the existing GHCR release workflow. Pull
 requests continue to use the GitHub runner build because forked pull requests
 do not receive the Launchpad credentials.
