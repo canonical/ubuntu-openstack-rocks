@@ -86,7 +86,7 @@ jobs:
       rocks: ${{ steps.get-rocks.outputs.rocks }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.branch }}
 
@@ -137,12 +137,11 @@ jobs:
       fail-fast: false
       matrix:
         rock: ${{ fromJson(needs.list-rocks.outputs.rocks) }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_rock.yaml@v49.0.3
+    uses: canonical/data-platform-workflows/.github/workflows/build_rock.yaml@v53.0.0
     with:
       path-to-rock-directory: rocks/${{ matrix.rock }}
       artifact-prefix: packed-rock-${{ matrix.rock }}
     permissions:
-      actions: read  # Needed by build_rock.yaml to look up the workflow version
       contents: read
 
   secscan:
@@ -156,12 +155,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.branch }}
 
       - name: Download built rock artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: packed-rock-${{ matrix.rock }}-*
           merge-multiple: true
@@ -187,7 +186,7 @@ jobs:
 
       - name: Run secscan
         id: run-secscan
-        uses: canonical/cs-github-actions/run-secscan@899a33fc9207d2b0bcfae2aaf9013139085937cb # main
+        uses: canonical/cs-github-actions/run-secscan@6f2d80fda623e2fd4e83f916c85ece24e430a27f # main
         with:
           oci-image-file: ${{ steps.rock-info.outputs.rock-file }}
           oci-image-version: ${{ steps.rock-info.outputs.version }}
@@ -198,7 +197,7 @@ jobs:
 
       - name: Upload secscan results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: secscan-results-${{ matrix.rock }}
           path: ${{ steps.run-secscan.outputs.results-location }}
@@ -215,12 +214,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.branch }}
 
       - name: Download built rock artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: packed-rock-${{ matrix.rock }}-*
           merge-multiple: true
@@ -245,7 +244,7 @@ jobs:
 
       - name: Generate SBOM
         id: generate-sbom
-        uses: canonical/cs-github-actions/generate-sboms@899a33fc9207d2b0bcfae2aaf9013139085937cb # main
+        uses: canonical/cs-github-actions/generate-sboms@6f2d80fda623e2fd4e83f916c85ece24e430a27f # main
         with:
           oci-image-file: ${{ steps.rock-info.outputs.rock-file }}
           oci-image-digest: ${{ steps.rock-info.outputs.digest }}
@@ -256,7 +255,7 @@ jobs:
 
       - name: Upload SBOM results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-results-${{ matrix.rock }}
           path: ${{ steps.generate-sbom.outputs.results-location }}
