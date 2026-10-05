@@ -11,6 +11,9 @@ version: "2026.1"
 # renovate: base: ubuntu:26.04@sha256:88a381d5b5eeb2b35d3ad70925a362c37ce569daf43ede89ff818ec20e4d3794
 base: ubuntu@26.04
 
+environment:
+  PYTHONPATH: /usr/lib/python3.14/site-packages
+
 platforms:
   amd64:
   arm64:
@@ -47,9 +50,16 @@ parts:
     stage-packages:
     - cron
     - iputils-ping
+    - libexpat1
+    stage:
+    - "*"
+    # Preserve the usr/bin interpreter and the base's usrmerged lib64 link.
+    - "-bin/python3"
+    - "-bin/python3.*"
+    - "-lib64"
     override-prime: |
       craftctl default
 
       # set suid to utilties
       # Without this tempest user can execute ping but exits with returncode 2
-      chmod u+s $CRAFT_PRIME/bin/ping
+      chmod u+s $CRAFT_PRIME/usr/bin/ping
