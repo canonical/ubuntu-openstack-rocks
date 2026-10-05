@@ -8,8 +8,8 @@ description: |
   deployment. This ROCK is built using the snap-tempest.
 version: "2026.1"
 
-# renovate: base: ubuntu:22.04@sha256:023f8a753c22258c9fe2d0005a7d28258038da7d620e9f93e9ad78aa266f9f11
-base: ubuntu@22.04
+# renovate: base: ubuntu:26.04@sha256:88a381d5b5eeb2b35d3ad70925a362c37ce569daf43ede89ff818ec20e4d3794
+base: ubuntu@26.04
 
 platforms:
   amd64:
@@ -43,7 +43,7 @@ parts:
     after: [tempest-user]
     plugin: nil
     stage-snaps:
-    - tempest/2025.1/candidate
+    - tempest/2026.1/stable
     stage-packages:
     - cron
     - iputils-ping
