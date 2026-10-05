@@ -17,25 +17,28 @@ jobs:
       rocks: ${{ steps.all-rocks.outputs.rocks }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: List rockcraft files
         id: list-files
         run: |
-          all_rock_files=$(find rocks -name rockcraft.yaml -printf "%p ")
-          echo "All rock files: $all_rock_files"
-          echo "all_rock_files=$all_rock_files" >> $GITHUB_OUTPUT
+          find rocks -name rockcraft.yaml -print0 > rock-files.list
       - name: set output
         id: all-rocks
+        env:
+          FILTER: ${{ inputs.filter }}
         run: |
+          set -euo pipefail
           components=()
-          # trim file name to component name
-          for file in ${{ steps.list-files.outputs.all_rock_files }}; do
-              component=$(echo $file | sed 's/rocks\/\(\S.*\)\/rockcraft.yaml/\1/')
-              [[ ! -z "$component" ]] && components+=($component)
-          done
-          all_rocks=$(echo "\"${components[@]}\"" | jq --compact-output '[. | split(" ") | .[] | select(. | match("${{ inputs.filter }}"))]')
+          while IFS= read -r -d '' file; do
+            component=${file#rocks/}
+            component=${component%/rockcraft.yaml}
+            components+=("${component}")
+          done < rock-files.list
+          all_rocks=$(jq --compact-output --null-input --arg filter "${FILTER}" \
+            '$ARGS.positional | map(select(test($filter)))' \
+            --args "${components[@]}")
           echo "All rocks: $all_rocks"
-          echo "rocks=$all_rocks" >> $GITHUB_OUTPUT
+          echo "rocks=$all_rocks" >> "$GITHUB_OUTPUT"
   build-and-publish:
     needs: allrocks
     if: ${{ needs.allrocks.outputs.rocks != '[]' }}
@@ -47,3 +50,4 @@ jobs:
     with:
       rocks: ${{ needs.allrocks.outputs.rocks }}
       publish: true
+    secrets: inherit

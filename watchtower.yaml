@@ -1,0 +1,3 @@
+projects:
+  - name: ubuntu-openstack-rocks
+    artifact_type: rock
