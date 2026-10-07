@@ -53,3 +53,34 @@ parts:
       - python3
       - python3-venv
       - python3-dev
+    override-build: |
+      craftctl default
+      # pip uses the build-time interpreter path into console-script shebangs
+      # (absent at runtime -> exit 127). Rewrite both the one-line and the
+      # 3-line "long shebang" polyglot forms to the runtime interpreter.
+      python3 - <<'PY'
+      import os
+      from pathlib import Path
+
+      bindir = Path(os.environ["CRAFT_PART_INSTALL"]) / "usr" / "bin"
+      for script in bindir.iterdir():
+          if not script.is_file():
+              continue
+          try:
+              lines = script.read_text().splitlines()
+          except (UnicodeDecodeError, OSError):
+              continue
+          if not lines or not lines[0].startswith("#!"):
+              continue
+
+          first = lines[0]
+          head = "\n".join(lines[:3])
+          if "'''exec'" in head and "parts/" in head:
+              body = lines[3:]          # polyglot: strip the 3-line header
+          elif "/parts/" in first or "/home/buildd/" in first or "gh-rocks" in first:
+              body = lines[1:]          # plain shebang to a build path
+          else:
+              continue                  # already clean or an unrelated script
+          script.write_text("#!/usr/bin/python3\n" + "\n".join(body) + "\n")
+          script.chmod(0o755)
+      PY
