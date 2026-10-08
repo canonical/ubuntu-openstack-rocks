@@ -14,10 +14,10 @@ jobs:
       rocks: ${{ steps.changed-rocks.outputs.rocks }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Get changed rockcraft files
         id: changed-files
-        uses: tj-actions/changed-files@v44
+        uses: tj-actions/changed-files@v47
         with:
           files: |
             rocks/*/rockcraft.yaml

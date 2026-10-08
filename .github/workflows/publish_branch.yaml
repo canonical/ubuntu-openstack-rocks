@@ -43,7 +43,6 @@ jobs:
     needs: allrocks
     if: ${{ needs.allrocks.outputs.rocks != '[]' }}
     permissions:
-      actions: read
       contents: write
       packages: write
     uses: ./.github/workflows/build_publish.yaml
