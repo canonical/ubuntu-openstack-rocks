@@ -62,8 +62,11 @@ parts:
       import os
       from pathlib import Path
 
-      bindir = Path(os.environ["CRAFT_PART_INSTALL"]) / "usr" / "bin"
-      for script in bindir.iterdir():
+      # TODO: this is a workaround for issue canonical/rockcraft#1385,
+      # it should be reverted once the underlying issue is resolved
+      install = Path(os.environ["CRAFT_PART_INSTALL"])
+      bindirs = [install / "bin", install / "usr" / "bin"]
+      for script in (p for d in bindirs if d.is_dir() for p in d.iterdir()):
           if not script.is_file():
               continue
           try:
