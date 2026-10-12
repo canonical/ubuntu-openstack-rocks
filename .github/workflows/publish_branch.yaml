@@ -41,8 +41,10 @@ jobs:
           echo "rocks=$all_rocks" >> "$GITHUB_OUTPUT"
   build-and-publish:
     needs: allrocks
+    if: ${{ needs.allrocks.outputs.rocks != '[]' }}
     permissions:
-      contents: read
+      actions: read
+      contents: write
       packages: write
     uses: ./.github/workflows/build_publish.yaml
     with:

@@ -10,6 +10,7 @@ jobs:
   build:
     name: Build rock
     needs: modified_rocks
+    if: ${{ needs.modified_rocks.outputs.rocks != '[]' }}
     strategy:
       fail-fast: false
       matrix:
