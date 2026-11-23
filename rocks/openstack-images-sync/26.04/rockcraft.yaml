@@ -1,0 +1,89 @@
+name: openstack-images-sync
+summary: Daemon to synchronize streams from a simplestreams server to glance
+license: Apache-2.0
+description: >-
+  Openstack Images Sync is a tool allowing synchronization
+  from a list of SimpleStreams source to an OpenStack cloud.
+version: "2026.1"
+# renovate: base: ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6
+base: ubuntu@26.04
+
+platforms:
+  amd64:
+  arm64:
+  s390x:
+
+run-user: _daemon_
+
+services:
+  http-mirror:
+    override: replace
+    command: apachectl -D FOREGROUND
+  images-sync:
+    override: replace
+    command: simplestreams-sync
+    group: _daemon_
+    user: _daemon_
+
+parts:
+  httpd:
+    plugin: nil
+    overlay-packages:
+      - apache2
+    overlay-script: |
+      rm ${CRAFT_OVERLAY}/etc/apache2/ports.conf
+    override-prime: |
+      craftctl default
+      mkdir -p $CRAFT_PRIME/etc/apache2/
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf
+
+  openstack-images-sync:
+    plugin: python
+    source: https://github.com/canonical/openstack-images-sync/
+    source-type: git
+    source-depth: 1
+    source-commit: 89f18a706b369892b418125fae7879e5550c4827
+    build-packages:
+      # cryptography has no prebuilt s390x wheel, so it is built from
+      # source via Rust; openssl-sys needs pkg-config and the OpenSSL
+      # headers to locate the system OpenSSL.
+      - pkg-config
+      - libssl-dev
+    stage-packages:
+      - python3
+      - python3-venv
+      - python3-dev
+    override-build: |
+      craftctl default
+      # pip uses the build-time interpreter path into console-script shebangs
+      # (absent at runtime -> exit 127). Rewrite both the one-line and the
+      # 3-line "long shebang" polyglot forms to the runtime interpreter.
+      python3 - <<'PY'
+      import os
+      from pathlib import Path
+
+      # TODO: this is a workaround for issue canonical/rockcraft#1385,
+      # it should be reverted once the underlying issue is resolved
+      install = Path(os.environ["CRAFT_PART_INSTALL"])
+      bindirs = [install / "bin", install / "usr" / "bin"]
+      for script in (p for d in bindirs if d.is_dir() for p in d.iterdir()):
+          if not script.is_file():
+              continue
+          try:
+              lines = script.read_text().splitlines()
+          except (UnicodeDecodeError, OSError):
+              continue
+          if not lines or not lines[0].startswith("#!"):
+              continue
+
+          first = lines[0]
+          head = "\n".join(lines[:3])
+          if "'''exec'" in head and "parts/" in head:
+              body = lines[3:]          # polyglot: strip the 3-line header
+          elif "/parts/" in first or "/home/buildd/" in first or "gh-rocks" in first:
+              body = lines[1:]          # plain shebang to a build path
+          else:
+              continue                  # already clean or an unrelated script
+          script.write_text("#!/usr/bin/python3\n" + "\n".join(body) + "\n")
+          script.chmod(0o755)
+      PY

@@ -1,0 +1,50 @@
+name: neutron-consolidated
+summary: Openstack neutron-consolidated
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack Neutron which can be used for all Neutron services
+version: "2026.1"
+# renovate: base: ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6
+base: ubuntu@26.04
+
+platforms:
+  amd64:
+  arm64:
+  s390x:
+
+parts:
+  neutron-user:
+    plugin: nil
+    # 42435:42435 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42435 --system neutron
+      useradd \
+        --gid 42435 \
+        --uid 42435 \
+        --no-create-home \
+        --home /var/lib/neutron \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        neutron
+
+  neutron-consolidated:
+    after: [neutron-user]
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - neutron-api
+      - neutron-rpc-server
+      - neutron-periodic-workers
+      - python3-ironic-neutron-agent
+      - python3-neutron-dynamic-routing
+      - python3-neutron-vpnaas
+      - python3-networking-generic-switch
+      - python3-networking-sfc
+      - python3-oslo.vmware
+      - apache2
+      - libapache2-mod-wsgi-py3
+      - openvswitch-common
+    override-prime: |
+      craftctl default
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf

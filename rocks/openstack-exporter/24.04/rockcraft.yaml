@@ -1,0 +1,37 @@
+name: openstack-exporter
+summary: Openstack openstack-exporter
+license: Apache-2.0
+description: |
+  Ubuntu distribution of openstack-exporter, a prometheus exporter for OpenStack
+version: "1.7.0-3be9ddb-24.04"
+
+base: bare
+# renovate: build-base: ubuntu:24.04@sha256:023f8a753c22258c9fe2d0005a7d28258038da7d620e9f93e9ad78aa266f9f11
+build-base: ubuntu@24.04
+
+run-user: _daemon_
+platforms:
+  amd64:
+  arm64:
+  s390x:
+
+parts:
+  openstack-exporter:
+    plugin: go
+    source: https://github.com/openstack-exporter/openstack-exporter
+    source-commit: 3be9ddb59cedcbfad8f0c1c254cea10c9c1a06c6
+    source-type: git
+    source-depth: 1
+    build-environment:
+      - CGO_ENABLED: "0"
+      - GOFLAGS: -mod=readonly -ldflags=-s
+    build-snaps:
+      - go/1.22/stable
+    override-prime: |
+      craftctl default
+      folders=(/etc/os-exporter /usr/local/share/ca-certificates)
+      for folder in "${folders[@]}"; do
+        mkdir -p $CRAFT_PRIME/$folder
+        chown 584792:584792 $CRAFT_PRIME/$folder
+        chmod 750 $CRAFT_PRIME/$folder
+      done

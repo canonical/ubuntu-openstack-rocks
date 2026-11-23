@@ -1,0 +1,23 @@
+name: ovn-consolidated
+summary: Openstack ovn-consolidated
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OVN which can be used for all OVN services
+version: "26.03"
+# renovate: base: ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6
+base: ubuntu@26.04
+
+platforms:
+  amd64:
+  arm64:
+  s390x:
+
+parts:
+  ovn-consolidated:
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - ovn-central
+      - openvswitch-switch
+      - python3-openvswitch
+      - python3-netifaces

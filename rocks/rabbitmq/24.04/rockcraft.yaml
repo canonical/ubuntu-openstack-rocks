@@ -1,0 +1,86 @@
+name: rabbitmq
+summary: RabbitMQ
+description: AMQP based message broker.
+version: "4.0.5"
+# renovate: base: ubuntu:24.04@sha256:023f8a753c22258c9fe2d0005a7d28258038da7d620e9f93e9ad78aa266f9f11
+base: ubuntu@24.04
+license: Apache-2.0
+
+platforms:
+  amd64:
+  arm64:
+  s390x:
+
+environment:
+  PATH: /opt/rabbitmq/sbin:/opt/erlang/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  HOME: /var/lib/rabbitmq
+  RABBITMQ_CONF_ENV_FILE: /etc/rabbitmq/rabbitmq-env.conf
+  RABBITMQ_CONFIG_FILE: /etc/rabbitmq/rabbitmq
+  RABBITMQ_CONFIG_FILES: /etc/rabbitmq/conf.d
+  RABBITMQ_ENABLED_PLUGINS_FILE: /etc/rabbitmq/enabled_plugins
+  RABBITMQ_MNESIA_BASE: /var/lib/rabbitmq/mnesia
+  RABBITMQ_LOG_BASE: /var/log/rabbitmq
+
+services:
+  rabbitmq:
+    override: replace
+    startup: disabled
+    summary: RabbitMQ message broker
+    command: rabbitmq-server
+    user: rabbitmq
+    group: rabbitmq
+    requires:
+      - epmd
+    environment:
+      TZ: UTC
+  epmd:
+    override: replace
+    startup: disabled
+    summary: Erlang EPM service
+    command: epmd
+    user: rabbitmq
+    group: rabbitmq
+    environment:
+      TZ: UTC
+
+parts:
+  rabbitmq-user:
+    plugin: nil
+    overlay-script: |
+      groupadd --root "$CRAFT_OVERLAY" --gid 999 --system rabbitmq
+      useradd --root "$CRAFT_OVERLAY" --gid 999 --uid 999 --system \
+        --create-home --home-dir /var/lib/rabbitmq rabbitmq
+      install -d -o 999 -g 999 "$CRAFT_OVERLAY/var/log/rabbitmq"
+  erlang:
+    plugin: nil
+    # Noble's archive Erlang is older than the minimum for RabbitMQ 4.0.
+    source: https://github.com/erlang/otp/releases/download/OTP-26.2.5.21/otp_src_26.2.5.21.tar.gz
+    source-checksum: sha256/e1fde86f4e2874d4c136221a34753b5b785d762b910fb3fb35a23a6a7faf0a64
+    build-packages:
+      - build-essential
+      - libncurses-dev
+      - libssl-dev
+    overlay-packages:
+      - libncurses6
+      - libssl3t64
+      - procps
+    override-build: |
+      set -eu
+      ./configure --prefix=/opt/erlang --without-javac --without-wx --without-odbc
+      make -j"$CRAFT_PARALLEL_BUILD_COUNT"
+      make DESTDIR="$CRAFT_PART_INSTALL" install
+  rabbitmq:
+    after: [rabbitmq-user, erlang]
+    plugin: nil
+    source: https://github.com/rabbitmq/rabbitmq-server/releases/download/v4.0.5/rabbitmq-server-generic-unix-4.0.5.tar.xz
+    source-checksum: sha256/2027f93b275454295d869e637e09f5cc690603d1a2e1c8273780a84bdaf57827
+    override-build: |
+      set -eu
+      install -d "$CRAFT_PART_INSTALL/opt/rabbitmq"
+      cp -a . "$CRAFT_PART_INSTALL/opt/rabbitmq/"
+  rabbitmq-config:
+    after: [rabbitmq]
+    plugin: dump
+    source: ./etc
+    organize:
+      "rabbitmq/*": etc/rabbitmq/

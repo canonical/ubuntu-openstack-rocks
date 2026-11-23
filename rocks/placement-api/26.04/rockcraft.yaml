@@ -1,0 +1,45 @@
+name: placement-api
+summary: Openstack placement-api
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack placement-api
+version: "2026.1"
+# renovate: base: ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6
+base: ubuntu@26.04
+
+platforms:
+  amd64:
+  arm64:
+  s390x:
+
+services:
+  wsgi-placement-api:
+    override: replace
+    command: apachectl -D FOREGROUND
+
+parts:
+  placement-user:
+    plugin: nil
+    # 42482:42482 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42482 --system placement
+      useradd \
+        --gid 42482 \
+        --uid 42482 \
+        --no-create-home \
+        --home /var/lib/placement \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        placement
+
+  placement-api:
+    after: [placement-user]
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - placement-api
+      - python3-pymysql
+    override-prime: |
+      craftctl default
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf

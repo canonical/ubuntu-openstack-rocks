@@ -1,0 +1,103 @@
+name: tempest
+summary: OpenStack integration test suite
+license: Apache-2.0
+description: |
+  Tempest is a set of integration tests to be run against a live OpenStack
+  cluster. Tempest has batteries of tests for OpenStack API validation,
+  Scenarios, and other specific tests useful in validating an OpenStack
+  deployment.
+version: "2026.1"
+
+# renovate: base: ubuntu:24.04@sha256:023f8a753c22258c9fe2d0005a7d28258038da7d620e9f93e9ad78aa266f9f11
+base: ubuntu@24.04
+
+environment:
+  PYTHONPATH: /usr/lib/tempest
+
+platforms:
+  amd64:
+  arm64:
+  s390x:
+
+parts:
+  tempest-user:
+    plugin: nil
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 999 --system tempest
+      useradd \
+        --gid 999 \
+        --uid 999 \
+        --home-dir /var/lib/tempest \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        tempest
+    override-prime: |
+      craftctl default
+
+      # Give permission and create the required directories
+      mkdir -p $CRAFT_PRIME/var/lib/tempest
+      chown -R 999:999 $CRAFT_PRIME/var/lib/tempest
+    overlay-packages:
+      # this must be in overlay-packages - see https://github.com/canonical/rockcraft/issues/334
+      - ca-certificates # required for discover-tempest-config to download cirros image
+
+  tempest:
+    after: [tempest-user]
+    plugin: nil
+    source: https://opendev.org/openstack/tempest.git
+    source-type: git
+    source-tag: 47.0.0
+    build-packages:
+      - git
+      - python3-venv
+      - python3-dev
+      - libssl-dev
+      - libffi-dev
+      - libxml2-dev
+      - libxslt1-dev
+      - libpq-dev
+      - librdkafka-dev
+      - rustc-1.89
+      - cargo-1.89
+      - pkg-config
+    build-environment:
+      - RUSTC: /usr/bin/rustc-1.89
+      - CARGO: /usr/bin/cargo-1.89
+    overlay-packages:
+      - cron
+      - iputils-ping
+      - python3
+      - libpq5
+      - librdkafka1
+    override-build: |
+      set -eu
+      /usr/bin/python3 -m venv "$CRAFT_PART_BUILD/venv"
+      target="$CRAFT_PART_INSTALL/usr/lib/tempest"
+      # Keep the 2026.1 plugin set in sync with snap-tempest stable/gazpacho.
+      cat > "$CRAFT_PART_BUILD/requirements.txt" <<'REQUIREMENTS'
+        git+https://opendev.org/openstack/barbican-tempest-plugin.git@4.6.0
+        git+https://opendev.org/openstack/cinder-tempest-plugin.git@1.23.0
+        git+https://opendev.org/openstack/designate-tempest-plugin.git@0.30.0
+        git+https://opendev.org/openstack/glance-tempest-plugin.git@0.17.0
+        git+https://opendev.org/openstack/heat-tempest-plugin.git@3.0.0
+        git+https://opendev.org/openstack/ironic-tempest-plugin.git@3.2.0
+        git+https://opendev.org/openstack/keystone-tempest-plugin.git@0.22.0
+        git+https://opendev.org/openstack/magnum-tempest-plugin.git@2.12.0
+        git+https://opendev.org/openstack/manila-tempest-plugin.git@3.2.0
+        git+https://opendev.org/openstack/neutron-tempest-plugin.git@3.3.0
+        git+https://opendev.org/openstack/octavia-tempest-plugin.git@3.5.0
+        git+https://opendev.org/openstack/telemetry-tempest-plugin.git@2.11.0
+        git+https://opendev.org/openinfra/python-tempestconf.git@3.5.4
+      REQUIREMENTS
+      "$CRAFT_PART_BUILD/venv/bin/python" -m pip install --target "$target" \
+        --requirement "$CRAFT_PART_BUILD/requirements.txt" "$CRAFT_PART_SRC"
+      install -d "$CRAFT_PART_INSTALL/usr/bin"
+      for command in tempest discover-tempest-config stestr; do
+        sed '1c #!/usr/bin/python3' "$target/bin/$command" > "$CRAFT_PART_INSTALL/usr/bin/$command"
+        chmod 0755 "$CRAFT_PART_INSTALL/usr/bin/$command"
+      done
+      rm -r "$target/bin"
+    override-prime: |
+      craftctl default
+      chmod u+s "$CRAFT_PRIME/usr/bin/ping"

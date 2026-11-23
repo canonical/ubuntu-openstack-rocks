@@ -1,0 +1,56 @@
+name: glance-api
+summary: Openstack glance-api
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack glance-api
+version: "2026.1"
+# renovate: base: ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6
+base: ubuntu@26.04
+
+platforms:
+  amd64:
+  arm64:
+  s390x:
+
+services:
+  glance-api:
+    override: replace
+    command: /usr/bin/glance-api --config-file /etc/glance/glance-api.conf
+    user: glance
+    group: glance
+  "apache forwarder":
+    override: replace
+    command: /usr/sbin/apache2ctl -DFOREGROUND
+
+parts:
+  glance-user:
+    plugin: nil
+    # 42415:42415 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42415 --system glance
+      useradd \
+        --gid 42415 \
+        --uid 42415 \
+        --no-create-home \
+        --home /var/lib/glance \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        glance
+
+  glance-api:
+    after: [glance-user]
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - ceph-common
+      - nfs-common
+      - glance
+      - python3-boto3
+      - python3-rados
+      - python3-rbd
+      - apache2
+      - libapache2-mod-wsgi-py3
+    override-prime: |
+      craftctl default
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf

@@ -1,0 +1,152 @@
+name: horizon
+summary: Openstack horizon
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack horizon
+version: "2026.1"
+# renovate: base: ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6
+base: ubuntu@26.04
+
+platforms:
+  amd64:
+  arm64:
+  s390x:
+
+services:
+  wsgi-horizon:
+    override: replace
+    command: apachectl -D FOREGROUND
+
+parts:
+  horizon-user:
+    plugin: nil
+    # 42420:42420 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42420 --system horizon
+      useradd \
+        --gid 42420 \
+        --uid 42420 \
+        --no-create-home \
+        --home /var/lib/openstack-dashboard \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        horizon
+
+  horizon:
+    after: [horizon-user]
+    plugin: nil
+    overlay-packages:
+      - sudo
+      - openstack-dashboard
+      - python3-memcache
+      - python3-designate-dashboard
+      - python3-mysqldb
+      # Horizon plugins needing manual management
+      # - python3-heat-dashboard # disabled LP#2155142
+      # - python3-magnum-ui # disabled LP#2155145
+      - python3-manila-ui
+      - python3-octavia-dashboard
+      - python3-watcher-dashboard
+      - python3-masakari-dashboard
+      - python3-cloudkitty-dashboard
+    override-stage: |
+      craftctl default
+      echo > $CRAFT_STAGE/etc/apache2/ports.conf
+
+      OS_DASHBOARD=usr/lib/python3/dist-packages/openstack_dashboard
+      AVAILABLE=$OS_DASHBOARD/available
+      mkdir -p $CRAFT_STAGE/$AVAILABLE || true
+      echo "_1370_project_container_infra_panel_group.py
+      _1371_project_container_infra_clusters_panel.py
+      _1372_project_container_infra_cluster_templates_panel.py
+      _2370_admin_container_infra_panel_group.py
+      _2371_admin_container_infra_quotas_panel.py" > $CRAFT_STAGE/$AVAILABLE/magnum
+      # TODO: remove the following line when LP#2155145 is resolved.
+      echo "" > $CRAFT_STAGE/$AVAILABLE/magnum
+      echo "_80_manila_admin_add_share_panel_group.py
+      _80_manila_project_add_share_panel_group.py
+      _9010_manila_admin_add_shares_panel_to_share_panel_group.py
+      _9010_manila_project_add_shares_panel_to_share_panel_group.py
+      _9020_manila_admin_add_share_snapshots_panel_to_share_panel_group.py
+      _9020_manila_project_add_share_snapshots_panel_to_share_panel_group.py
+      _9030_manila_admin_add_share_types_panel_to_share_panel_group.py
+      _9040_manila_admin_add_share_networks_panel_to_share_panel_group.py
+      _9040_manila_project_add_share_networks_panel_to_share_panel_group.py
+      _9050_manila_admin_add_security_services_panel_to_share_panel_group.py
+      _9050_manila_project_add_security_services_panel_to_share_panel_group.py
+      _9060_manila_admin_add_share_servers_panel_to_share_panel_group.py
+      _9070_manila_admin_add_share_instances_panel_to_share_panel_group.py
+      _9080_manila_admin_add_share_groups_panel_to_share_panel_group.py
+      _9080_manila_project_add_share_groups_panel_to_share_panel_group.py
+      _9085_manila_admin_add_share_group_snapshots_panel_to_share_panel_group.py
+      _9085_manila_project_add_share_group_snapshots_panel_to_share_panel_group.py
+      _9090_manila_admin_add_share_group_types_panel_to_share_panel_group.py
+      _9095_manila_admin_add_user_messages_panel_to_share_panel_group.py
+      _9095_manila_project_add_user_messages_panel_to_share_panel_group.py" > $CRAFT_STAGE/$AVAILABLE/manila
+      echo "_1482_project_load_balancer_panel.py" > $CRAFT_STAGE/$AVAILABLE/octavia
+      echo "_50_masakaridashboard.py" > $CRAFT_STAGE/$AVAILABLE/masakari
+      echo "_1610_project_orchestration_panel.py
+      _1620_project_stacks_panel.py
+      _1630_project_resource_types_panel.py
+      _1640_project_template_versions_panel.py
+      _1650_project_template_generator_panel.py" > $CRAFT_STAGE/$AVAILABLE/heat
+      # TODO: remove the following line when LP#2155142 is resolved.
+      echo "" > $CRAFT_STAGE/$AVAILABLE/heat
+      echo "_31000_goals_panel.py
+      _31010_strategies_panel.py
+      _31020_watcher_panelgroup.py
+      _31030_audit_templates_panel.py
+      _31040_audits_panel.py
+      _31050_action_plans_panel.py
+      _31060_actions_panel.py" > $CRAFT_STAGE/$AVAILABLE/watcher
+      echo "_32010_admin_group.py
+      _32011_project_group.py
+      _32020_admin_hashmap_panel.py
+      _32021_admin_rating_panel.py
+      _32022_admin_summary_panel.py
+      _32030_project_rating_panel.py
+      _32031_project_reporting_panel.py
+      _32040_admin_pyscripts_panel.py
+      _32050_cloudkitty.py" > $CRAFT_STAGE/$AVAILABLE/cloudkitty
+    override-prime: |
+      craftctl default
+
+      OS_DASHBOARD=usr/lib/python3/dist-packages/openstack_dashboard
+      AVAILABLE=$OS_DASHBOARD/available
+      ENABLED=$OS_DASHBOARD/enabled
+      LOCAL_ENABLED=$OS_DASHBOARD/local/enabled
+      mkdir -p $CRAFT_PRIME/$AVAILABLE || true
+
+      plugin_files=$(ls $CRAFT_STAGE/$AVAILABLE)
+      for plugin_file in $plugin_files; do
+        echo "Processing $plugin_file"
+        cp $CRAFT_STAGE/$AVAILABLE/$plugin_file $CRAFT_PRIME/$AVAILABLE/$plugin_file
+        while read line; do
+          # Skip empty lines when a dashboard is emptied out for workaround
+          if [[ -z "$line" ]]; then
+            continue
+          fi
+
+          enable_file=$CRAFT_PRIME/$ENABLED/$line
+          local_enable_file=$CRAFT_PRIME/$LOCAL_ENABLED/$line
+          available_file=$CRAFT_PRIME/$AVAILABLE/$line
+
+          if [[ -f $enable_file ]]; then
+              mv $enable_file $available_file
+          elif [[ -f $local_enable_file ]]; then
+              mv $local_enable_file $available_file
+          fi
+
+          [[ -f $available_file ]] || (echo "File $available_file not found" && exit 1)
+        done < $CRAFT_STAGE/$AVAILABLE/$plugin_file
+      done
+
+  horizon-plugin:
+    plugin: dump
+    source: python/
+    organize:
+      plugin_management.py: usr/bin/plugin_management.py
+    override-prime: |
+      craftctl default
+      chmod 550 $CRAFT_PRIME/usr/bin/plugin_management.py

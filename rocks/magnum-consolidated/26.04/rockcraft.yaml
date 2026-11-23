@@ -1,0 +1,52 @@
+name: magnum-consolidated
+summary: Openstack magnum-consolidated
+license: Apache-2.0
+description: |
+  Ubuntu distribution of OpenStack magnum-consolidated
+version: "2026.1"
+# renovate: base: ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6
+base: ubuntu@26.04
+
+platforms:
+  amd64:
+  arm64:
+  s390x:
+
+package-repositories:
+  - type: apt
+    ppa: canonical-openstack/magnum-capi-helm
+
+parts:
+  magnum-user:
+    plugin: nil
+    # 42428:42428 for kolla compatibility
+    overlay-script: |
+      groupadd --root $CRAFT_OVERLAY --gid 42428 --system magnum
+      useradd \
+        --gid 42428 \
+        --uid 42428 \
+        --no-create-home \
+        --home /var/lib/magnum \
+        --root $CRAFT_OVERLAY \
+        --system \
+        --shell /bin/false \
+        magnum
+
+  magnum-consolidated:
+    after: [magnum-user]
+    plugin: nil
+    stage-snaps:
+      - helm/3/stable
+    overlay-packages:
+      - sudo
+      - apache2
+      - libapache2-mod-wsgi-py3
+      - magnum-api
+      - magnum-conductor
+      - python3-magnum-capi-helm
+    override-prime: |
+      craftctl default
+      echo > $CRAFT_PRIME/etc/apache2/ports.conf
+
+      # Move helm package to bin
+      mv $CRAFT_PRIME/helm $CRAFT_PRIME/usr/bin/
