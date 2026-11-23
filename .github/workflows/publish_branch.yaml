@@ -18,27 +18,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-      - name: List rockcraft files
-        id: list-files
-        run: |
-          find rocks -name rockcraft.yaml -print0 > rock-files.list
-      - name: set output
+      - name: Select ROCK names
         id: all-rocks
         env:
           FILTER: ${{ inputs.filter }}
         run: |
           set -euo pipefail
-          components=()
-          while IFS= read -r -d '' file; do
-            component=${file#rocks/}
-            component=${component%/rockcraft.yaml}
-            components+=("${component}")
-          done < rock-files.list
-          all_rocks=$(jq --compact-output --null-input --arg filter "${FILTER}" \
-            '$ARGS.positional | map(select(test($filter)))' \
-            --args "${components[@]}")
-          echo "All rocks: $all_rocks"
-          echo "rocks=$all_rocks" >> "$GITHUB_OUTPUT"
+          rocks=$(python3 .github/scripts/plan-rocks.py |
+            jq -c --arg filter "$FILTER" '.rocks | map(select(test($filter)))')
+          echo "rocks=$rocks" >> "$GITHUB_OUTPUT"
   build-and-publish:
     needs: allrocks
     if: ${{ needs.allrocks.outputs.rocks != '[]' }}

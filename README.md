@@ -2,13 +2,35 @@
 
 ## CI builds
 
-Pushes to the configured branches and manual runs of **Publish all ROCKs from
-selected branch** build on Launchpad through `sunbeam-watchtower`. Each ROCK is
-built for every architecture declared in its `rockcraft.yaml`. The selected
-ROCKs are submitted together in one Watchtower invocation. Successful
-Launchpad artifacts are passed to the existing GHCR release workflow. Pull
-requests continue to use the GitHub runner build because forked pull requests
-do not receive the Launchpad credentials.
+Pushes and manual publishing runs discover the recipes on the selected ref.
+A ROCK can declare separate Rockcraft projects by base. For example:
+
+```text
+rocks/nova-consolidated/
+├── 24.04/rockcraft.yaml
+└── 26.04/rockcraft.yaml
+```
+
+The directory identifies the Ubuntu runtime base, or the Ubuntu build base for
+a `bare` image. Each project contains the local files its recipe needs. To pack
+one directly, run `rockcraft pack --platform amd64` in its base directory.
+
+Single-base branches can keep a root recipe at `rocks/<name>/rockcraft.yaml`.
+CI builds only the projects that exist on the selected branch. PR checks build
+each project from its own directory. Publishing groups builds by base and
+copies the selected projects to the ROCK root in temporary Launchpad build
+refs, so Watchtower sees one recipe per image name in each build.
+
+Automatic PR and push builds select a ROCK when one of its `rockcraft.yaml`
+files changes. Only recipes present on the selected ref enter the build matrix.
+
+Ubuntu images use their usual base-specific tags. For bare images, the Noble
+variant uses a `-24.04` version suffix to distinguish its tag from the existing
+Resolute-built `-bare_edge` tag. Consul uses `1.19.2-bare_edge` and
+`1.19.2-24.04-bare_edge` for the two variants.
+
+For Security Scan and SBOM, select the branch in **Run workflow** so the
+reusable build and scan jobs check out the same ref.
 
 The Launchpad build jobs require the `LAUNCHPAD_SSH_PRIVATE_KEY`,
 `LP_ACCESS_TOKEN`, and `LP_ACCESS_TOKEN_SECRET` Actions secrets for the

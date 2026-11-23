@@ -6,12 +6,16 @@ on:
         rocks:
             description: List of modified rocks as a json string.
             value: ${{ jobs.modifiedrocks.outputs.rocks }}
+        recipes:
+            description: Build matrix for recipes belonging to modified ROCKs.
+            value: ${{ jobs.modifiedrocks.outputs.recipes }}
 
 jobs:
   modifiedrocks:
     runs-on: ubuntu-latest
     outputs:
       rocks: ${{ steps.changed-rocks.outputs.rocks }}
+      recipes: ${{ steps.changed-rocks.outputs.recipes }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -20,17 +24,27 @@ jobs:
         uses: tj-actions/changed-files@v47
         with:
           files: |
-            rocks/*/rockcraft.yaml
+            rocks/**/rockcraft.yaml
       - name: set output
         id: changed-rocks
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }} ${{ steps.changed-files.outputs.deleted_files }}
         run: |
+          set -euo pipefail
+          read -ra changed_files <<< "$CHANGED_FILES"
+          all_rocks=$(python3 .github/scripts/plan-rocks.py | jq -c '.rocks')
           components=()
-          # trim file name to component name
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-              [[ -f "$file" ]] || continue
-              component=$(echo $file | sed 's/rocks\/\(\S.*\)\/rockcraft.yaml/\1/')
-              [[ ! -z "$component" ]] && components+=($component)
+          for file in "${changed_files[@]}"; do
+              case "$file" in
+                  rocks/*/rockcraft.yaml)
+                      component=${file#rocks/}
+                      components+=("${component%%/*}")
+                      ;;
+              esac
           done
-          modified_rocks=$(jq --compact-output --null-input '$ARGS.positional' --args -- "${components[@]}")
-          echo "Modified rocks: $modified_rocks"
-          echo "rocks=$modified_rocks" >> $GITHUB_OUTPUT
+          rocks=$(jq -nc --argjson all "$all_rocks" --args '
+            $ARGS.positional as $changed | [$all[] | select(IN($changed[]))]
+          ' -- "${components[@]}")
+          plan=$(python3 .github/scripts/plan-rocks.py --rocks "$rocks")
+          echo "rocks=$rocks" >> "$GITHUB_OUTPUT"
+          echo "recipes=$(jq -c '.releases' <<< "$plan")" >> "$GITHUB_OUTPUT"

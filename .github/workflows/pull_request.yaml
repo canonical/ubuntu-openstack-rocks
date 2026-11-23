@@ -8,16 +8,16 @@ jobs:
     uses: ./.github/workflows/modified_rocks.yaml
 
   build:
-    name: Build rock
+    name: Build ${{ matrix.rock }} (${{ matrix.variant }})
     needs: modified_rocks
     if: ${{ needs.modified_rocks.outputs.rocks != '[]' }}
     strategy:
       fail-fast: false
       matrix:
-        rock: ${{ fromJson(needs.modified_rocks.outputs.rocks) }}
+        include: ${{ fromJSON(needs.modified_rocks.outputs.recipes) }}
     uses: canonical/data-platform-workflows/.github/workflows/build_rock.yaml@v53.0.0
     with:
-      path-to-rock-directory: rocks/${{ matrix.rock }}
-      artifact-prefix: packed-rock-${{ matrix.rock }}
+      path-to-rock-directory: ${{ matrix.path }}
+      artifact-prefix: packed-rock-${{ matrix.rock }}-${{ matrix.variant }}
     permissions:
       contents: read

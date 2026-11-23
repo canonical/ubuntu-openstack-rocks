@@ -83,86 +83,71 @@ jobs:
     needs: check-prereqs
     runs-on: ubuntu-latest
     outputs:
-      rocks: ${{ steps.get-rocks.outputs.rocks }}
+      recipes: ${{ steps.get-rocks.outputs.recipes }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ github.ref }}
 
       - name: List rocks
         id: get-rocks
         env:
           ROCKS_INPUT: ${{ inputs.rocks }}
+          REQUESTED_BRANCH: ${{ inputs.branch }}
         run: |
-          if [[ -n "$ROCKS_INPUT" ]]; then
-            echo "rocks=$ROCKS_INPUT" >> "$GITHUB_OUTPUT"
-          else
-            # TODO: This logic should go away once all rocks have been converted to consolidated format
-            # and we can rely on a consistent naming pattern. For now, we include all *-consolidated rocks
-            # plus a fixed set of standalone rocks that haven't been converted yet.
-            mapfile -t rocks < <(
-              find rocks -maxdepth 1 -mindepth 1 -type d -printf '%f\n' \
-                | grep -E '^.*-consolidated$' \
-                | sort
-            )
-            rocks+=(
-              consul
-              glance-api
-              horizon
-              keystone
-              openstack-exporter
-              openstack-images-sync
-              openstack-port-cni
-              ovs-cni-plugin
-              placement-api
-              rabbitmq
-              skyline-apiserver
-              tempest
-            )
-            # neutron-server exists on stable/2024.1 instead of neutron-consolidated
-            if [[ -d "rocks/neutron-server" ]]; then
-              rocks+=(neutron-server)
-            fi
-            rocks_json=$(printf '%s\n' "${rocks[@]}" \
-              | sort -u \
-              | jq -R -s -c 'split("\n") | map(select(length > 0))')
-            echo "rocks=$rocks_json" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [[ -n "$REQUESTED_BRANCH" && "$REQUESTED_BRANCH" != "$GITHUB_REF_NAME" ]]; then
+              echo "::error::Select the requested branch in Run workflow so the reusable build checks out the same ref."
+              exit 1
           fi
+          if [[ -z "$ROCKS_INPUT" ]]; then
+              # Include consolidated images and the legacy standalone scan set.
+              ROCKS_INPUT=$(python3 .github/scripts/plan-rocks.py | jq -c '
+                .rocks | map(select(endswith("-consolidated") or IN(
+                  "consul", "glance-api", "horizon", "keystone", "neutron-server",
+                  "openstack-exporter", "openstack-images-sync", "openstack-port-cni",
+                  "ovs-cni-plugin", "placement-api", "rabbitmq", "skyline-apiserver", "tempest"
+                )))
+              ')
+          fi
+          plan=$(python3 .github/scripts/plan-rocks.py --rocks "$ROCKS_INPUT")
+          echo "recipes=$(jq -c '.releases' <<< "$plan")" >> "$GITHUB_OUTPUT"
 
   build:
-    name: Build ${{ matrix.rock }}
+    name: Build ${{ matrix.rock }} (${{ matrix.variant }})
     needs: [check-prereqs, list-rocks]
+    if: ${{ needs.list-rocks.outputs.recipes != '[]' }}
     strategy:
       fail-fast: false
       matrix:
-        rock: ${{ fromJson(needs.list-rocks.outputs.rocks) }}
+        include: ${{ fromJSON(needs.list-rocks.outputs.recipes) }}
     uses: canonical/data-platform-workflows/.github/workflows/build_rock.yaml@v53.0.0
     with:
-      path-to-rock-directory: rocks/${{ matrix.rock }}
-      artifact-prefix: packed-rock-${{ matrix.rock }}
+      path-to-rock-directory: ${{ matrix.path }}
+      artifact-prefix: packed-rock-${{ matrix.rock }}-${{ matrix.variant }}
     permissions:
       contents: read
 
   secscan:
-    name: Secscan ${{ matrix.rock }}
+    name: Secscan ${{ matrix.rock }} (${{ matrix.variant }})
     if: ${{ inputs.tasks == 'secscan' || inputs.tasks == 'both' }}
     needs: [list-rocks, build]
     strategy:
       fail-fast: false
       matrix:
-        rock: ${{ fromJson(needs.list-rocks.outputs.rocks) }}
+        include: ${{ fromJSON(needs.list-rocks.outputs.recipes) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ github.ref }}
 
       - name: Download built rock artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: packed-rock-${{ matrix.rock }}-*
+          pattern: packed-rock-${{ matrix.rock }}-${{ matrix.variant }}-*
           merge-multiple: true
           path: rock-artifacts/
 
@@ -170,6 +155,7 @@ jobs:
         id: rock-info
         env:
           ROCK: ${{ matrix.rock }}
+          ROCK_PATH: ${{ matrix.path }}
         run: |
           rock_file=$(find rock-artifacts/ -name "*_amd64.rock" | head -1)
           if [[ -z "$rock_file" ]]; then
@@ -180,7 +166,7 @@ jobs:
             exit 1
           fi
           echo "rock-file=$rock_file" >> "$GITHUB_OUTPUT"
-          version=$(grep -m1 '^version:' "rocks/$ROCK/rockcraft.yaml" \
+          version=$(grep -m1 '^version:' "$ROCK_PATH/rockcraft.yaml" \
             | sed 's/version:[[:space:]]*//' | tr -d '"')
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -199,29 +185,29 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: secscan-results-${{ matrix.rock }}
+          name: secscan-results-${{ matrix.rock }}-${{ matrix.variant }}
           path: ${{ steps.run-secscan.outputs.results-location }}
           if-no-files-found: warn
 
   sbom:
-    name: SBOM ${{ matrix.rock }}
+    name: SBOM ${{ matrix.rock }} (${{ matrix.variant }})
     if: ${{ inputs.tasks == 'sbom' || inputs.tasks == 'both' }}
     needs: [list-rocks, build]
     strategy:
       fail-fast: false
       matrix:
-        rock: ${{ fromJson(needs.list-rocks.outputs.rocks) }}
+        include: ${{ fromJSON(needs.list-rocks.outputs.recipes) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ github.ref }}
 
       - name: Download built rock artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: packed-rock-${{ matrix.rock }}-*
+          pattern: packed-rock-${{ matrix.rock }}-${{ matrix.variant }}-*
           merge-multiple: true
           path: rock-artifacts/
 
@@ -257,6 +243,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: sbom-results-${{ matrix.rock }}
+          name: sbom-results-${{ matrix.rock }}-${{ matrix.variant }}
           path: ${{ steps.generate-sbom.outputs.results-location }}
           if-no-files-found: warn
