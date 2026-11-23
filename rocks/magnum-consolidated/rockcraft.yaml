@@ -4,8 +4,8 @@ license: Apache-2.0
 description: |
   Ubuntu distribution of OpenStack magnum-consolidated
 version: "2026.1"
-# renovate: base: ubuntu:24.04@sha256:023f8a753c22258c9fe2d0005a7d28258038da7d620e9f93e9ad78aa266f9f11
-base: ubuntu@24.04
+# renovate: base: ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6
+base: ubuntu@26.04
 
 platforms:
   amd64:
@@ -14,13 +14,21 @@ platforms:
 
 package-repositories:
   - type: apt
-    cloud: gazpacho
-    priority: always
-  - type: apt
     ppa: canonical-openstack/magnum-capi-helm
+  # LP: #2155247. Remove both sources and the Magnum version pins once the
+  # fixed packages reach resolute-updates.
   - type: apt
-    ppa: canonical-openstack/2026.1-fix-builds-uca-gazpacho
-    priority: 1500
+    url: http://archive.ubuntu.com/ubuntu/
+    suites: [resolute-proposed]
+    components: [universe]
+    architectures: [amd64]
+    key-id: F6ECB3762474EDA9D21B7022871920D1991BC93C
+  - type: apt
+    url: http://ports.ubuntu.com/ubuntu-ports/
+    suites: [resolute-proposed]
+    components: [universe]
+    architectures: [arm64, s390x]
+    key-id: F6ECB3762474EDA9D21B7022871920D1991BC93C
 
 parts:
   magnum-user:
@@ -47,12 +55,15 @@ parts:
       - sudo
       - apache2
       - libapache2-mod-wsgi-py3
-      - magnum-api
-      - magnum-conductor
+      - magnum-api=22.0.0-0ubuntu1.1
+      - magnum-conductor=22.0.0-0ubuntu1.1
+      - magnum-common=22.0.0-0ubuntu1.1
+      - python3-magnum=22.0.0-0ubuntu1.1
       - python3-magnum-capi-helm
     override-prime: |
       craftctl default
       echo > $CRAFT_PRIME/etc/apache2/ports.conf
+      test -x "$CRAFT_PRIME/usr/bin/magnum-api-wsgi"
 
       # Move helm package to bin
       mv $CRAFT_PRIME/helm $CRAFT_PRIME/usr/bin/
