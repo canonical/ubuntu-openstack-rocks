@@ -49,6 +49,7 @@ parts:
       - libapache2-mod-auth-openidc
       - libapache2-mod-oauth2
       - python3-ldappool
+      - python3-redis
       - python3-requests-kerberos
     override-prime: |
       craftctl default
