@@ -1,0 +1,36 @@
+name: Publish ROCKs weekly
+
+on:
+  schedule:
+    - cron: '23 2 * * 2'  # main
+    - cron: '23 2 * * 3'  # stable/2024.1
+    - cron: '23 2 * * 4'  # stable/2025.1
+    - cron: '23 2 * * 5'  # stable/2026.1
+
+permissions: {}
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the branch publish workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          set -euo pipefail
+          case "$SCHEDULE" in
+            '23 2 * * 2') branch=main ;;
+            '23 2 * * 3') branch=stable/2024.1 ;;
+            '23 2 * * 4') branch=stable/2025.1 ;;
+            '23 2 * * 5') branch=stable/2026.1 ;;
+            *) echo "::error::Unexpected schedule: $SCHEDULE"; exit 1 ;;
+          esac
+
+          run_url=$(gh api --method POST \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/publish_branch.yaml/dispatches" \
+            -f "ref=$branch" --jq '.html_url')
+          printf 'Dispatched [%s](%s)\n' "$branch" "$run_url" >> "$GITHUB_STEP_SUMMARY"
